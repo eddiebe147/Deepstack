@@ -5,12 +5,15 @@ Evaluates stocks based on fundamental value criteria and short squeeze potential
 Generates trade theses and recommendations for the DeepStack trading system.
 """
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..config import get_config  # noqa: F401 - Required for test mocking
+from ..data.alpaca_client import AlpacaClient
+from ..data.alphavantage_client import AlphaVantageClient
 from .base_agent import AgentResponse, BaseAgent, Tool
 
 logger = logging.getLogger(__name__)
@@ -71,7 +74,38 @@ class StrategyAgent(BaseAgent):
         self.deep_value_config = self.config.strategies.deep_value
         self.squeeze_config = self.config.strategies.squeeze_hunter
 
+        # Initialize API clients
+        self.alpaca_client: Optional[AlpacaClient] = None
+        self.alphavantage_client: Optional[AlphaVantageClient] = None
+        self._initialize_api_clients()
+
         logger.info("StrategyAgent initialized with deep value and squeeze detection")
+
+    def _initialize_api_clients(self):
+        """Initialize real API clients for market data."""
+        try:
+            # Initialize Alpaca client if credentials are available
+            if self.config.alpaca_api_key and self.config.alpaca_secret_key:
+                self.alpaca_client = AlpacaClient(
+                    api_key=self.config.alpaca_api_key,
+                    secret_key=self.config.alpaca_secret_key,
+                    base_url=self.config.alpaca_base_url,
+                )
+                logger.info("AlpacaClient initialized successfully")
+            else:
+                logger.warning("Alpaca API credentials not configured")
+
+            # Initialize Alpha Vantage client if API key is available
+            if self.config.alpha_vantage_api_key:
+                self.alphavantage_client = AlphaVantageClient(
+                    api_key=self.config.alpha_vantage_api_key,
+                )
+                logger.info("AlphaVantageClient initialized successfully")
+            else:
+                logger.warning("Alpha Vantage API key not configured")
+
+        except Exception as e:
+            logger.error(f"Error initializing API clients: {e}")
 
     def _register_tools(self):
         """Register strategy analysis tools."""
@@ -175,97 +209,424 @@ class StrategyAgent(BaseAgent):
         )
 
     async def _handle_get_stock_quote(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Get stock quote data."""
+        """Get stock quote data using real API."""
         symbol = args["symbol"]
 
-        # In real implementation, this would call IBKR or other data source
-        # For now, return mock data
-        return {
-            "symbol": symbol,
-            "price": 150.0 + (hash(symbol) % 100),  # Mock price
-            "volume": 1000000,
-            "market_cap": 50000000000,
-            "sector": "Technology",
-        }
+        try:
+            # Use Alpaca for real-time quote data
+            if self.alpaca_client:
+                quote = await self.alpaca_client.get_quote(symbol)
+                if quote:
+                    # Get additional data from Alpha Vantage
+                    overview = None
+                    if self.alphavantage_client:
+                        overview = await self.alphavantage_client.get_company_overview(
+                            symbol
+                        )
+
+                    return {
+                        "symbol": symbol,
+                        "price": float(quote.get("ask", quote.get("last", 0))),
+                        "bid": float(quote.get("bid", 0)),
+                        "ask": float(quote.get("ask", 0)),
+                        "volume": quote.get("ask_volume", 0)
+                        + quote.get("bid_volume", 0),
+                        "market_cap": overview.get("market_cap", 0) if overview else 0,
+                        "sector": (
+                            overview.get("sector", "Unknown") if overview else "Unknown"
+                        ),
+                        "timestamp": quote.get("timestamp"),
+                    }
+
+            # Fallback: Use Alpha Vantage overview for basic data
+            elif self.alphavantage_client:
+                overview = await self.alphavantage_client.get_company_overview(symbol)
+                if overview:
+                    return {
+                        "symbol": symbol,
+                        "price": 0,  # Alpha Vantage doesn't provide real-time quotes
+                        "volume": 0,
+                        "market_cap": overview.get("market_cap", 0),
+                        "sector": overview.get("sector", "Unknown"),
+                    }
+
+            # No API clients available
+            logger.warning(f"No API clients available for quote data for {symbol}")
+            return {
+                "symbol": symbol,
+                "price": 0,
+                "volume": 0,
+                "market_cap": 0,
+                "sector": "Unknown",
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting quote for {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "price": 0,
+                "volume": 0,
+                "market_cap": 0,
+                "sector": "Unknown",
+            }
 
     async def _handle_get_fundamentals(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Get fundamental data."""
+        """Get fundamental data using real API."""
         symbol = args["symbol"]
 
-        # Mock fundamental data based on symbol
-        base_data = {
-            "symbol": symbol,
-            "pe_ratio": 12.5 + (hash(symbol) % 20),
-            "pb_ratio": 0.8 + (hash(symbol) % 0.8),
-            "roe": 0.12 + (hash(symbol) % 0.10),
-            "debt_equity": 0.3 + (hash(symbol) % 0.4),
-            "current_ratio": 1.2 + (hash(symbol) % 0.8),
-            "fcf_yield": 0.05 + (hash(symbol) % 0.05),
-            "dividend_yield": 0.02 + (hash(symbol) % 0.02),
-        }
+        try:
+            if self.alphavantage_client:
+                # Get fundamental metrics from Alpha Vantage
+                fundamentals = await self.alphavantage_client.get_fundamentals(symbol)
+                if fundamentals:
+                    # Get additional data from overview
+                    overview = await self.alphavantage_client.get_company_overview(
+                        symbol
+                    )
 
-        return base_data
+                    return {
+                        "symbol": symbol,
+                        "pe_ratio": fundamentals.get("pe_ratio")
+                        or 15.0,  # Default P/E if missing
+                        "pb_ratio": fundamentals.get("pb_ratio")
+                        or 1.5,  # Default P/B if missing
+                        "roe": fundamentals.get("roe") or 0.10,  # Default ROE 10%
+                        "debt_equity": fundamentals.get("debt_to_equity") or 0.5,
+                        "current_ratio": fundamentals.get("current_ratio") or 1.0,
+                        "fcf_yield": fundamentals.get("fcf_yield")
+                        or 0.03,  # Default 3%
+                        "dividend_yield": (
+                            overview.get("dividend_yield", 0) if overview else 0
+                        ),
+                        "profit_margin": fundamentals.get("profit_margin") or 0.10,
+                        "operating_margin": fundamentals.get("operating_margin")
+                        or 0.15,
+                        "timestamp": fundamentals.get("timestamp"),
+                    }
+
+            # No API client available, return market averages as defaults
+            logger.warning(f"No API client available for fundamentals for {symbol}")
+            return {
+                "symbol": symbol,
+                "pe_ratio": 15.0,  # Market average P/E
+                "pb_ratio": 1.5,  # Market average P/B
+                "roe": 0.10,  # 10% ROE
+                "debt_equity": 0.5,
+                "current_ratio": 1.0,
+                "fcf_yield": 0.03,
+                "dividend_yield": 0.02,
+                "profit_margin": 0.10,
+                "operating_margin": 0.15,
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting fundamentals for {symbol}: {e}")
+            # Return conservative defaults on error
+            return {
+                "symbol": symbol,
+                "pe_ratio": 20.0,  # Conservative default
+                "pb_ratio": 2.0,
+                "roe": 0.08,
+                "debt_equity": 1.0,
+                "current_ratio": 1.0,
+                "fcf_yield": 0.02,
+                "dividend_yield": 0.01,
+            }
 
     async def _handle_get_short_interest(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Get short interest and squeeze data."""
         symbol = args["symbol"]
 
-        # Mock squeeze data
-        short_interest = 0.15 + (hash(symbol) % 0.25)  # 15-40%
-        days_to_cover = 3 + (hash(symbol) % 8)  # 3-11 days
-        borrow_cost = 0.02 + (hash(symbol) % 0.15)  # 2-17%
-        float_available = 0.10 + (hash(symbol) % 0.20)  # 10-30%
+        # Note: Alpha Vantage doesn't provide short interest data
+        # This would need integration with a different data source (e.g., FINRA, Ortex)
+        # For now, we'll use volume data to estimate trading intensity
 
-        squeeze_score = self._calculate_squeeze_score(
-            short_interest, days_to_cover, borrow_cost, float_available
-        )
+        try:
+            # Get volume data from Alpaca to estimate trading intensity
+            volume_data = {}
+            if self.alpaca_client:
+                bars = await self.alpaca_client.get_bars(symbol, limit=20)
+                if bars:
+                    # Calculate average volume and volatility
+                    volumes = [bar.get("volume", 0) for bar in bars]
+                    avg_volume = sum(volumes) / len(volumes) if volumes else 0
 
-        return {
-            "symbol": symbol,
-            "short_interest_pct": short_interest,
-            "days_to_cover": days_to_cover,
-            "cost_to_borrow": borrow_cost,
-            "float_available_pct": float_available,
-            "squeeze_score": squeeze_score,
-        }
+                    # High volume can indicate short covering activity
+                    recent_volume = volumes[-1] if volumes else 0
+                    volume_ratio = recent_volume / avg_volume if avg_volume > 0 else 1.0
+
+                    volume_data = {
+                        "avg_volume": avg_volume,
+                        "recent_volume": recent_volume,
+                        "volume_ratio": volume_ratio,
+                    }
+
+            # TODO: Integrate with a proper short interest data provider
+            # For now, use conservative estimates based on volume patterns
+            # High volume ratio might indicate squeeze activity
+            volume_ratio = volume_data.get("volume_ratio", 1.0)
+
+            # Conservative estimates (not real data)
+            # These should be replaced with real short interest data
+            short_interest = 0.10  # Conservative 10% estimate
+            days_to_cover = 2.0  # Conservative 2 days estimate
+            borrow_cost = 0.02  # 2% borrow cost estimate
+            float_available = 0.30  # 30% float available estimate
+
+            # Adjust estimates based on volume patterns
+            if volume_ratio > 2.0:
+                # High volume might indicate squeeze activity
+                short_interest = min(0.20, short_interest * 1.5)
+                days_to_cover = min(5.0, days_to_cover * 1.5)
+                borrow_cost = min(0.05, borrow_cost * 1.5)
+
+            squeeze_score = self._calculate_squeeze_score(
+                short_interest, days_to_cover, borrow_cost, float_available
+            )
+
+            result = {
+                "symbol": symbol,
+                "short_interest_pct": short_interest,
+                "days_to_cover": days_to_cover,
+                "cost_to_borrow": borrow_cost,
+                "float_available_pct": float_available,
+                "squeeze_score": squeeze_score,
+                "data_source": "estimated",  # Flag that this is estimated data
+                "volume_data": volume_data,
+                "note": "Short interest data not available from current APIs. Using conservative estimates.",
+            }
+
+            logger.warning(
+                f"Short interest data for {symbol} is estimated. Consider integrating FINRA or Ortex API."
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Error getting short interest for {symbol}: {e}")
+            # Return very conservative defaults on error
+            return {
+                "symbol": symbol,
+                "short_interest_pct": 0.05,  # 5% conservative default
+                "days_to_cover": 1.0,
+                "cost_to_borrow": 0.01,
+                "float_available_pct": 0.50,
+                "squeeze_score": 0,
+                "data_source": "default",
+                "note": "Error retrieving data, using conservative defaults.",
+            }
 
     async def _handle_analyze_sector(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze sector positioning."""
+        """Analyze sector positioning using real API data."""
         symbol = args["symbol"]
+        sector = args.get("sector", None)
 
-        # Mock sector analysis
-        return {
-            "symbol": symbol,
-            "sector": "Technology",
-            "sector_performance": 0.12,  # 12% sector return
-            "relative_strength": 0.85,  # 85th percentile
-            "peer_comparison": {"avg_pe": 18.5, "avg_pb": 2.1, "avg_roe": 0.15},
-        }
+        try:
+            # Get company overview to determine sector if not provided
+            if self.alphavantage_client:
+                overview = await self.alphavantage_client.get_company_overview(symbol)
+                if overview:
+                    actual_sector = overview.get("sector", "Unknown")
+                    industry = overview.get("industry", "Unknown")
+
+                    # Get fundamentals for peer comparison context
+                    fundamentals = await self.alphavantage_client.get_fundamentals(
+                        symbol
+                    )
+
+                    # Calculate relative metrics
+                    company_pe = fundamentals.get("pe_ratio", 0) if fundamentals else 0
+                    company_roe = fundamentals.get("roe", 0) if fundamentals else 0
+
+                    # Sector averages (would ideally come from a sector index API)
+                    # For now, use typical sector averages as reference
+                    sector_averages = {
+                        "Technology": {"avg_pe": 25.0, "avg_pb": 3.5, "avg_roe": 0.18},
+                        "Finance": {"avg_pe": 12.0, "avg_pb": 1.2, "avg_roe": 0.12},
+                        "Healthcare": {"avg_pe": 20.0, "avg_pb": 3.0, "avg_roe": 0.15},
+                        "Consumer": {"avg_pe": 18.0, "avg_pb": 2.5, "avg_roe": 0.14},
+                        "Energy": {"avg_pe": 15.0, "avg_pb": 1.5, "avg_roe": 0.10},
+                        "Industrial": {"avg_pe": 17.0, "avg_pb": 2.0, "avg_roe": 0.13},
+                    }
+
+                    # Get sector averages or use defaults
+                    sector_avg = sector_averages.get(
+                        actual_sector, {"avg_pe": 18.0, "avg_pb": 2.0, "avg_roe": 0.12}
+                    )
+
+                    # Calculate relative strength (simplified)
+                    relative_strength = 0.5  # Default to median
+                    if company_pe > 0 and sector_avg["avg_pe"] > 0:
+                        # Lower P/E relative to sector is better
+                        pe_ratio_vs_sector = company_pe / sector_avg["avg_pe"]
+                        if pe_ratio_vs_sector < 0.8:
+                            relative_strength = 0.85  # Strong value
+                        elif pe_ratio_vs_sector < 1.0:
+                            relative_strength = 0.65  # Good value
+                        else:
+                            relative_strength = 0.35  # Expensive relative to sector
+
+                    return {
+                        "symbol": symbol,
+                        "sector": actual_sector,
+                        "industry": industry,
+                        "sector_performance": 0.10,  # Would need sector index data
+                        "relative_strength": relative_strength,
+                        "company_metrics": {
+                            "pe": company_pe,
+                            "roe": company_roe,
+                        },
+                        "peer_comparison": sector_avg,
+                        "data_source": "alphavantage",
+                    }
+
+            # No API client available
+            logger.warning(f"No API client available for sector analysis for {symbol}")
+            return {
+                "symbol": symbol,
+                "sector": sector or "Unknown",
+                "sector_performance": 0,
+                "relative_strength": 0.5,
+                "peer_comparison": {"avg_pe": 18.0, "avg_pb": 2.0, "avg_roe": 0.12},
+                "data_source": "default",
+            }
+
+        except Exception as e:
+            logger.error(f"Error analyzing sector for {symbol}: {e}")
+            return {
+                "symbol": symbol,
+                "sector": "Unknown",
+                "sector_performance": 0,
+                "relative_strength": 0.5,
+                "peer_comparison": {"avg_pe": 18.0, "avg_pb": 2.0, "avg_roe": 0.12},
+                "data_source": "error",
+            }
 
     async def _handle_scan_value_stocks(
         self, args: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Scan for undervalued stocks."""
-        # Mock scan results
-        mock_stocks = [
-            {"symbol": "AAPL", "pe": 12.3, "pb": 0.8, "roe": 0.18, "fcf_yield": 0.08},
-            {"symbol": "MSFT", "pe": 15.7, "pb": 1.2, "roe": 0.22, "fcf_yield": 0.06},
-            {"symbol": "GOOGL", "pe": 11.2, "pb": 0.7, "roe": 0.16, "fcf_yield": 0.09},
-            {"symbol": "TSLA", "pe": 45.8, "pb": 3.2, "roe": 0.08, "fcf_yield": 0.02},
-            {"symbol": "NVDA", "pe": 22.1, "pb": 2.8, "roe": 0.25, "fcf_yield": 0.04},
+        """Scan for undervalued stocks using real API data."""
+        max_pe = args.get("max_pe", 20)
+        max_pb = args.get("max_pb", 2.0)
+        min_roe = args.get("min_roe", 0.10)
+        limit = args.get("limit", 10)
+
+        # List of common stocks to scan (would ideally come from a screener API)
+        # For now, scan a curated list of liquid stocks
+        scan_symbols = [
+            "AAPL",
+            "MSFT",
+            "GOOGL",
+            "AMZN",
+            "META",
+            "NVDA",
+            "TSLA",
+            "BRK.B",
+            "JPM",
+            "JNJ",
+            "V",
+            "PG",
+            "UNH",
+            "HD",
+            "MA",
+            "BAC",
+            "DIS",
+            "CSCO",
+            "XOM",
+            "WMT",
+            "CVX",
+            "ABBV",
+            "PFE",
+            "KO",
+            "PEP",
+            "TMO",
+            "ABT",
+            "MRK",
+            "COST",
+            "AVGO",
         ]
 
-        # Filter based on criteria
-        filtered = []
-        for stock in mock_stocks:
-            if (
-                stock["pe"] <= args.get("max_pe", 20)
-                and stock["pb"] <= args.get("max_pb", 2.0)
-                and stock["roe"] >= args.get("min_roe", 0.10)
-            ):
-                filtered.append(stock)
+        filtered_stocks = []
 
-        return filtered[: args.get("limit", 10)]
+        try:
+            for symbol in scan_symbols[:20]:  # Limit initial scan to avoid rate limits
+                try:
+                    if self.alphavantage_client:
+                        # Get fundamentals for each stock
+                        fundamentals = await self.alphavantage_client.get_fundamentals(
+                            symbol
+                        )
+                        if fundamentals:
+                            pe = fundamentals.get(
+                                "pe_ratio", 100
+                            )  # High default to filter out
+                            pb = fundamentals.get("pb_ratio", 100)
+                            roe = fundamentals.get("roe", 0)
+                            fcf_yield = fundamentals.get("fcf_yield", 0)
+
+                            # Check if meets criteria
+                            if pe and pb and roe:  # Ensure we have valid data
+                                if pe <= max_pe and pb <= max_pb and roe >= min_roe:
+                                    filtered_stocks.append(
+                                        {
+                                            "symbol": symbol,
+                                            "pe": pe,
+                                            "pb": pb,
+                                            "roe": roe,
+                                            "fcf_yield": fcf_yield or 0,
+                                            "data_source": "alphavantage",
+                                        }
+                                    )
+
+                                    # Stop if we have enough stocks
+                                    if len(filtered_stocks) >= limit:
+                                        break
+
+                    # Small delay to avoid rate limits
+                    await asyncio.sleep(0.1)
+
+                except Exception as e:
+                    logger.warning(f"Error scanning {symbol}: {e}")
+                    continue
+
+            # Sort by P/E ratio (lower is better for value)
+            filtered_stocks.sort(key=lambda x: x.get("pe", 100))
+
+            # If no API client or no results, return example value stocks
+            if not filtered_stocks and not self.alphavantage_client:
+                logger.warning("No API client available for stock scanning")
+                # Return some well-known value stocks as examples
+                filtered_stocks = [
+                    {
+                        "symbol": "BRK.B",
+                        "pe": 15.0,
+                        "pb": 1.5,
+                        "roe": 0.12,
+                        "fcf_yield": 0.03,
+                        "data_source": "default",
+                    },
+                    {
+                        "symbol": "JPM",
+                        "pe": 12.0,
+                        "pb": 1.3,
+                        "roe": 0.15,
+                        "fcf_yield": 0.04,
+                        "data_source": "default",
+                    },
+                    {
+                        "symbol": "BAC",
+                        "pe": 10.0,
+                        "pb": 0.9,
+                        "roe": 0.11,
+                        "fcf_yield": 0.03,
+                        "data_source": "default",
+                    },
+                ]
+
+            return filtered_stocks[:limit]
+
+        except Exception as e:
+            logger.error(f"Error scanning for value stocks: {e}")
+            return []
 
     def _calculate_squeeze_score(
         self,
