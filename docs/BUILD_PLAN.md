@@ -293,7 +293,10 @@ For each task:
 ### **Week 5: Tax Optimization**
 
 #### **Task 5.1: Wash Sale Tracker**
-**Status:** [ ] Not started
+**Worker Agent:** `backend-architect`
+**Watcher Agent:** `code-reviewer` (launched after completion)
+**Quality Gate:** 90%+ coverage, 43 tests, IRS compliance validated
+**Status:** [x] Complete ✅ (Nov 5, 2025)
 
 #### **Task 5.2: Tax-Loss Harvesting**
 **Status:** [ ] Not started
