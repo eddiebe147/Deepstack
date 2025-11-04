@@ -189,6 +189,11 @@ class Config(BaseModel):
     ibkr_port: Optional[int] = None
     ibkr_client_id: Optional[int] = None
 
+    # Alpaca Configuration (from environment)
+    alpaca_api_key: Optional[str] = None
+    alpaca_secret_key: Optional[str] = None
+    alpaca_base_url: Optional[str] = None
+
     # Anthropic API Key (from environment)
     anthropic_api_key: Optional[str] = None
 
@@ -244,6 +249,11 @@ class Config(BaseModel):
             "ibkr_host": os.getenv("IBKR_HOST", "127.0.0.1"),
             "ibkr_port": int(os.getenv("IBKR_PORT", "7497")),
             "ibkr_client_id": int(os.getenv("IBKR_CLIENT_ID", "1")),
+            "alpaca_api_key": os.getenv("ALPACA_API_KEY"),
+            "alpaca_secret_key": os.getenv("ALPACA_SECRET_KEY"),
+            "alpaca_base_url": os.getenv(
+                "ALPACA_BASE_URL", "https://paper-api.alpaca.markets"
+            ),
             "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
         }
 
@@ -269,7 +279,15 @@ class Config(BaseModel):
 
         # Convert to dict, excluding environment variables
         config_dict = self.dict(
-            exclude={"ibkr_host", "ibkr_port", "ibkr_client_id", "anthropic_api_key"}
+            exclude={
+                "ibkr_host",
+                "ibkr_port",
+                "ibkr_client_id",
+                "alpaca_api_key",
+                "alpaca_secret_key",
+                "alpaca_base_url",
+                "anthropic_api_key",
+            }
         )
 
         try:

@@ -9,6 +9,7 @@ numpy>=1.24.0
 pyyaml>=6.0.1
 # sqlite3 is built into Python
 websockets>=12.0
+alpaca-py>=0.20.0
 
 # Data analysis
 ta-lib>=0.4.28
