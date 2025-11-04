@@ -64,6 +64,12 @@ For each task:
 
 **Quality Gate:** ≥80% coverage on existing code, all tests passing
 
+**Milestone Checkpoint:**
+- **Trigger:** All subtasks complete + quality gate passed
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 1.1 Complete: Pytest framework + 10 tests"
+- **Next Milestone:** Task 1.2 (Python quality tools)
+
 **Status:** [ ] Not started
 
 ---
@@ -95,6 +101,12 @@ For each task:
 
 **Quality Gate:** 100% code passes linting, >80% type hint coverage
 
+**Milestone Checkpoint:**
+- **Trigger:** All subtasks complete + quality gate passed
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 1.2 Complete: Python quality tools enforced"
+- **Next Milestone:** Task 1.3 (KRANG Protocol)
+
 **Status:** [ ] Not started
 
 ---
@@ -124,6 +136,12 @@ For each task:
 - New: `decision-log.sh`: Log architectural decisions
 
 **Quality Gate:** PROJECT_BRAIN established, first progress update logged
+
+**Milestone Checkpoint:**
+- **Trigger:** All PROJECT_BRAIN docs created + milestone tracking active
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 1.3 Complete: KRANG Protocol operational"
+- **Next Milestone:** Week 1 Complete (all Week 1 tasks done)
 
 **Status:** [x] In progress (ROADMAP.md created)
 
@@ -161,6 +179,12 @@ For each task:
 
 **Quality Gate:** Real price data flowing, 99%+ uptime in tests
 
+**Milestone Checkpoint:**
+- **Trigger:** Alpaca API working + quality gate passed
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 2.1 Complete: Alpaca API integration live"
+- **Next Milestone:** Task 2.2 (Alpha Vantage fundamentals)
+
 **Status:** [ ] Not started
 
 ---
@@ -181,6 +205,12 @@ For each task:
 - Test edge cases (missing data, delisted stocks)
 
 **Quality Gate:** Fundamentals data validated against public filings
+
+**Milestone Checkpoint:**
+- **Trigger:** Alpha Vantage API working + data validated
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 2.2 Complete: Fundamentals data integrated"
+- **Next Milestone:** Task 2.3 (Remove mock data)
 
 **Status:** [ ] Not started
 
@@ -203,6 +233,12 @@ For each task:
 - New: `mock-detector.sh`: Alert if mock data detected
 
 **Quality Gate:** Zero mock data in production code
+
+**Milestone Checkpoint:**
+- **Trigger:** All mock data removed + tests using real fixtures
+- **Action:** `milestone-tracker.sh` updates PROGRESS.md
+- **Log Entry:** "Task 2.3 Complete: Production ready with real data"
+- **Next Milestone:** Week 2 Complete → Phase 1 Complete (40% overall)
 
 **Status:** [ ] Not started
 
@@ -287,6 +323,74 @@ For each task:
 
 #### **Task 8.2: Production Deployment**
 **Status:** [ ] Not started
+
+---
+
+## 📍 MILESTONE TRACKING SYSTEM
+
+### **Automated Progress Updates**
+
+PROGRESS.md will be automatically updated at these major milestones:
+
+#### **Level 1: Task Completion Milestones**
+Triggered when all subtasks in a task are completed:
+- ✅ Task 1.1 Complete → Update PROGRESS.md, log velocity
+- ✅ Task 1.2 Complete → Update PROGRESS.md, log metrics
+- ✅ Task 1.3 Complete → Update PROGRESS.md, week 1 progress
+- (Repeats for all tasks 2.1-8.2)
+
+**Hook:** `milestone-tracker.sh` detects checked-off subtasks
+
+#### **Level 2: Quality Gate Milestones**
+Triggered when phase completion criteria are met:
+- ✅ 80%+ test coverage achieved → Update PROGRESS.md
+- ✅ Zero mock data verified → Update PROGRESS.md
+- ✅ 10+ paper trades completed → Update PROGRESS.md
+- ✅ Phase deliverables complete → Update PROGRESS.md
+
+**Hook:** `quality-gate-check.sh` validates criteria
+
+#### **Level 3: Week Completion Milestones**
+Triggered at end of each week (automated daily check):
+- ✅ Week 1 Complete → Auto-generate week summary
+- ✅ Week 2 Complete → Auto-generate week summary
+- (Repeats for weeks 3-8)
+
+**Hook:** `progress-report.sh` daily at 6 PM
+
+#### **Level 4: Phase Completion Milestones**
+Triggered when all phase tasks + quality gates pass:
+- ✅ Phase 1 Complete (40% → actual) → Major milestone log
+- ✅ Phase 2 Complete (60% → actual) → Major milestone log
+- ✅ Phase 3 Complete (80% → actual) → Major milestone log
+- ✅ Phase 4 Complete (95% → actual) → Project complete
+
+**Hook:** `milestone-tracker.sh` + `quality-gate-check.sh`
+
+### **Milestone Update Format**
+
+When a milestone is reached, PROGRESS.md receives:
+
+```markdown
+## 🎉 MILESTONE: [Milestone Name]
+**Date:** YYYY-MM-DD HH:MM
+**Completion:** [Percentage or status]
+**Velocity:** [Tasks/day or time/task]
+**Quality Gates:** [Which gates passed]
+**Next Milestone:** [What's next]
+```
+
+### **Milestone Detection Logic**
+
+```bash
+# milestone-tracker.sh logic
+1. Check BUILD_PLAN.md for task completion (all [ ] → [x])
+2. Check quality gates in QUALITY GATES section
+3. Calculate velocity (tasks completed / days elapsed)
+4. Update PROGRESS.md milestone log
+5. Commit with milestone message
+6. Optional: Notify user via terminal
+```
 
 ---
 
