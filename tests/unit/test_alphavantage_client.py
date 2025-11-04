@@ -15,13 +15,13 @@ import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.data.alphavantage_client import AlphaVantageClient, RateLimitError
+from core.data.alphavantage_client import AlphaVantageClient
 
 
 class TestAlphaVantageClientInitialization:
