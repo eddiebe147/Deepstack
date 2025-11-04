@@ -185,7 +185,7 @@ For each task:
 - **Log Entry:** "Task 2.1 Complete: Alpaca API integration live"
 - **Next Milestone:** Task 2.2 (Alpha Vantage fundamentals)
 
-**Status:** [ ] Not started
+**Status:** [x] Complete ✅ (Nov 4, 2025)
 
 ---
 
