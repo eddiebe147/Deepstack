@@ -5,21 +5,16 @@ Provides unified interface for real-time and historical market data
 from multiple sources (IBKR, Yahoo Finance, Alpha Vantage, etc.)
 """
 
-import asyncio
-import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
-from dataclasses import dataclass
 import json
-import os
+import logging
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import pandas as pd
 import yfinance as yf
-import requests
 
 from ..config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Quote:
     """Real-time quote data."""
+
     symbol: str
     bid: Optional[float]
     ask: Optional[float]
@@ -39,6 +35,7 @@ class Quote:
 @dataclass
 class MarketData:
     """Historical market data."""
+
     symbol: str
     timestamp: datetime
     open: float
@@ -71,7 +68,7 @@ class MarketDataManager:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Data source priorities
-        self.sources = ['ibkr', 'yfinance', 'cache']
+        self.sources = ["ibkr", "yfinance", "cache"]
 
         # Cache settings
         self.cache_ttl = 300  # 5 minutes
@@ -92,17 +89,17 @@ class MarketDataManager:
         # Try sources in priority order
         for source in self.sources:
             try:
-                if source == 'ibkr':
+                if source == "ibkr":
                     quote = await self._get_ibkr_quote(symbol)
                     if quote:
                         return quote
 
-                elif source == 'yfinance':
+                elif source == "yfinance":
                     quote = await self._get_yfinance_quote(symbol)
                     if quote:
                         return quote
 
-                elif source == 'cache':
+                elif source == "cache":
                     quote = self._get_cached_quote(symbol)
                     if quote:
                         return quote
@@ -114,8 +111,13 @@ class MarketDataManager:
         logger.error(f"Could not get quote for {symbol} from any source")
         return None
 
-    async def get_historical_data(self, symbol: str, start_date: datetime,
-                                end_date: datetime, interval: str = '1d') -> List[MarketData]:
+    async def get_historical_data(
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
+        interval: str = "1d",
+    ) -> List[MarketData]:
         """
         Get historical data for symbol.
 
@@ -131,23 +133,31 @@ class MarketDataManager:
         # Try sources in priority order
         for source in self.sources:
             try:
-                if source == 'ibkr':
-                    data = await self._get_ibkr_historical(symbol, start_date, end_date, interval)
+                if source == "ibkr":
+                    data = await self._get_ibkr_historical(
+                        symbol, start_date, end_date, interval
+                    )
                     if data:
                         return data
 
-                elif source == 'yfinance':
-                    data = await self._get_yfinance_historical(symbol, start_date, end_date, interval)
+                elif source == "yfinance":
+                    data = await self._get_yfinance_historical(
+                        symbol, start_date, end_date, interval
+                    )
                     if data:
                         return data
 
-                elif source == 'cache':
-                    data = self._get_cached_historical(symbol, start_date, end_date, interval)
+                elif source == "cache":
+                    data = self._get_cached_historical(
+                        symbol, start_date, end_date, interval
+                    )
                     if data:
                         return data
 
             except Exception as e:
-                logger.warning(f"Error getting historical data from {source} for {symbol}: {e}")
+                logger.warning(
+                    f"Error getting historical data from {source} for {symbol}: {e}"
+                )
                 continue
 
         logger.error(f"Could not get historical data for {symbol} from any source")
@@ -170,12 +180,12 @@ class MarketDataManager:
 
             return Quote(
                 symbol=symbol,
-                bid=info.get('bid'),
-                ask=info.get('ask'),
-                last=info.get('regularMarketPrice'),
-                volume=info.get('regularMarketVolume'),
+                bid=info.get("bid"),
+                ask=info.get("ask"),
+                last=info.get("regularMarketPrice"),
+                volume=info.get("regularMarketVolume"),
                 timestamp=datetime.now(),
-                source='yfinance'
+                source="yfinance",
             )
 
         except Exception as e:
@@ -191,35 +201,39 @@ class MarketDataManager:
                 return None
 
             # Check if cache is still valid
-            if (datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)).seconds > self.cache_ttl:
+            if (
+                datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)
+            ).seconds > self.cache_ttl:
                 cache_file.unlink()  # Remove stale cache
                 return None
 
-            with open(cache_file, 'r') as f:
+            with open(cache_file, "r") as f:
                 data = json.load(f)
 
             return Quote(
-                symbol=data['symbol'],
-                bid=data.get('bid'),
-                ask=data.get('ask'),
-                last=data.get('last'),
-                volume=data.get('volume'),
-                timestamp=datetime.fromisoformat(data['timestamp']),
-                source='cache'
+                symbol=data["symbol"],
+                bid=data.get("bid"),
+                ask=data.get("ask"),
+                last=data.get("last"),
+                volume=data.get("volume"),
+                timestamp=datetime.fromisoformat(data["timestamp"]),
+                source="cache",
             )
 
         except Exception as e:
             logger.error(f"Error reading cached quote for {symbol}: {e}")
             return None
 
-    async def _get_ibkr_historical(self, symbol: str, start_date: datetime,
-                                 end_date: datetime, interval: str) -> List[MarketData]:
+    async def _get_ibkr_historical(
+        self, symbol: str, start_date: datetime, end_date: datetime, interval: str
+    ) -> List[MarketData]:
         """Get historical data from IBKR."""
         # This would integrate with IBKRClient
         return []
 
-    async def _get_yfinance_historical(self, symbol: str, start_date: datetime,
-                                     end_date: datetime, interval: str) -> List[MarketData]:
+    async def _get_yfinance_historical(
+        self, symbol: str, start_date: datetime, end_date: datetime, interval: str
+    ) -> List[MarketData]:
         """Get historical data from Yahoo Finance."""
         try:
             ticker = yf.Ticker(symbol)
@@ -230,24 +244,29 @@ class MarketDataManager:
 
             data_points = []
             for timestamp, row in hist.iterrows():
-                data_points.append(MarketData(
-                    symbol=symbol,
-                    timestamp=timestamp.to_pydatetime(),
-                    open=row['Open'],
-                    high=row['High'],
-                    low=row['Low'],
-                    close=row['Close'],
-                    volume=int(row['Volume'])
-                ))
+                data_points.append(
+                    MarketData(
+                        symbol=symbol,
+                        timestamp=timestamp.to_pydatetime(),
+                        open=row["Open"],
+                        high=row["High"],
+                        low=row["Low"],
+                        close=row["Close"],
+                        volume=int(row["Volume"]),
+                    )
+                )
 
             return data_points
 
         except Exception as e:
-            logger.error(f"Error getting Yahoo Finance historical data for {symbol}: {e}")
+            logger.error(
+                f"Error getting Yahoo Finance historical data for {symbol}: {e}"
+            )
             return []
 
-    def _get_cached_historical(self, symbol: str, start_date: datetime,
-                             end_date: datetime, interval: str) -> List[MarketData]:
+    def _get_cached_historical(
+        self, symbol: str, start_date: datetime, end_date: datetime, interval: str
+    ) -> List[MarketData]:
         """Get cached historical data."""
         try:
             cache_key = f"{symbol}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}_{interval}"
@@ -257,24 +276,28 @@ class MarketDataManager:
                 return []
 
             # Check if cache is still valid
-            if (datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)).seconds > self.cache_ttl:
+            if (
+                datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)
+            ).seconds > self.cache_ttl:
                 cache_file.unlink()
                 return []
 
-            with open(cache_file, 'r') as f:
+            with open(cache_file, "r") as f:
                 data = json.load(f)
 
             market_data = []
             for item in data:
-                market_data.append(MarketData(
-                    symbol=item['symbol'],
-                    timestamp=datetime.fromisoformat(item['timestamp']),
-                    open=item['open'],
-                    high=item['high'],
-                    low=item['low'],
-                    close=item['close'],
-                    volume=item['volume']
-                ))
+                market_data.append(
+                    MarketData(
+                        symbol=item["symbol"],
+                        timestamp=datetime.fromisoformat(item["timestamp"]),
+                        open=item["open"],
+                        high=item["high"],
+                        low=item["low"],
+                        close=item["close"],
+                        volume=item["volume"],
+                    )
+                )
 
             return market_data
 
@@ -288,16 +311,16 @@ class MarketDataManager:
             cache_file = self.cache_dir / f"quote_{quote.symbol}.json"
 
             data = {
-                'symbol': quote.symbol,
-                'bid': quote.bid,
-                'ask': quote.ask,
-                'last': quote.last,
-                'volume': quote.volume,
-                'timestamp': quote.timestamp.isoformat(),
-                'source': quote.source
+                "symbol": quote.symbol,
+                "bid": quote.bid,
+                "ask": quote.ask,
+                "last": quote.last,
+                "volume": quote.volume,
+                "timestamp": quote.timestamp.isoformat(),
+                "source": quote.source,
             }
 
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(data, f)
 
         except Exception as e:
@@ -317,17 +340,19 @@ class MarketDataManager:
 
             serialized_data = []
             for item in data:
-                serialized_data.append({
-                    'symbol': item.symbol,
-                    'timestamp': item.timestamp.isoformat(),
-                    'open': item.open,
-                    'high': item.high,
-                    'low': item.low,
-                    'close': item.close,
-                    'volume': item.volume
-                })
+                serialized_data.append(
+                    {
+                        "symbol": item.symbol,
+                        "timestamp": item.timestamp.isoformat(),
+                        "open": item.open,
+                        "high": item.high,
+                        "low": item.low,
+                        "close": item.close,
+                        "volume": item.volume,
+                    }
+                )
 
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(serialized_data, f)
 
         except Exception as e:
@@ -349,15 +374,15 @@ class MarketDataManager:
             total_size = sum(f.stat().st_size for f in cache_files)
 
             return {
-                'file_count': len(cache_files),
-                'total_size_bytes': total_size,
-                'cache_dir': str(self.cache_dir)
+                "file_count": len(cache_files),
+                "total_size_bytes": total_size,
+                "cache_dir": str(self.cache_dir),
             }
 
         except Exception as e:
             logger.error(f"Error getting cache stats: {e}")
             return {
-                'file_count': 0,
-                'total_size_bytes': 0,
-                'cache_dir': str(self.cache_dir)
+                "file_count": 0,
+                "total_size_bytes": 0,
+                "cache_dir": str(self.cache_dir),
             }

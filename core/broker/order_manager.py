@@ -6,15 +6,12 @@ and position size validation built in.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime
-from decimal import Decimal
+from typing import Any, Dict, List, Optional
 
 from ..config import Config
 from ..risk.portfolio_risk import PortfolioRisk
 from .ibkr_client import IBKRClient
 from .paper_trader import PaperTrader
-
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +27,13 @@ class OrderManager:
     - Automatic bracket order creation
     """
 
-    def __init__(self, config: Config, ibkr_client: Optional[IBKRClient] = None,
-                 paper_trader: Optional[PaperTrader] = None, risk_manager: Optional[PortfolioRisk] = None):
+    def __init__(
+        self,
+        config: Config,
+        ibkr_client: Optional[IBKRClient] = None,
+        paper_trader: Optional[PaperTrader] = None,
+        risk_manager: Optional[PortfolioRisk] = None,
+    ):
         """
         Initialize order manager.
 
@@ -50,8 +52,9 @@ class OrderManager:
 
         logger.info("Order Manager initialized")
 
-    async def place_market_order(self, symbol: str, quantity: int, action: str,
-                               validate_risk: bool = True) -> Optional[str]:
+    async def place_market_order(
+        self, symbol: str, quantity: int, action: str, validate_risk: bool = True
+    ) -> Optional[str]:
         """
         Place a market order with risk validation.
 
@@ -78,8 +81,14 @@ class OrderManager:
             logger.error("No valid trading client available")
             return None
 
-    async def place_limit_order(self, symbol: str, quantity: int, action: str,
-                              limit_price: float, validate_risk: bool = True) -> Optional[str]:
+    async def place_limit_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        limit_price: float,
+        validate_risk: bool = True,
+    ) -> Optional[str]:
         """
         Place a limit order with risk validation.
 
@@ -94,21 +103,35 @@ class OrderManager:
             Order ID if successful, None otherwise
         """
         # Pre-trade validation
-        if validate_risk and not await self._validate_order(symbol, quantity, action, limit_price):
-            logger.warning(f"Limit order validation failed: {action} {quantity} {symbol} @ ${limit_price}")
+        if validate_risk and not await self._validate_order(
+            symbol, quantity, action, limit_price
+        ):
+            logger.warning(
+                f"Limit order validation failed: {action} {quantity} {symbol} @ ${limit_price}"
+            )
             return None
 
         # Place order based on trading mode
         if self.config.trading.mode == "live" and self.ibkr:
-            return await self.ibkr.place_limit_order(symbol, quantity, action, limit_price)
+            return await self.ibkr.place_limit_order(
+                symbol, quantity, action, limit_price
+            )
         elif self.config.trading.mode == "paper" and self.paper:
-            return await self.paper.place_limit_order(symbol, quantity, action, limit_price)
+            return await self.paper.place_limit_order(
+                symbol, quantity, action, limit_price
+            )
         else:
             logger.error("No valid trading client available")
             return None
 
-    async def place_stop_order(self, symbol: str, quantity: int, action: str,
-                             stop_price: float, validate_risk: bool = True) -> Optional[str]:
+    async def place_stop_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        stop_price: float,
+        validate_risk: bool = True,
+    ) -> Optional[str]:
         """
         Place a stop order with risk validation.
 
@@ -123,22 +146,36 @@ class OrderManager:
             Order ID if successful, None otherwise
         """
         # For stop orders, we mainly validate that we're not creating invalid stops
-        if validate_risk and not await self._validate_stop_order(symbol, quantity, action, stop_price):
-            logger.warning(f"Stop order validation failed: {action} {quantity} {symbol} stop @ ${stop_price}")
+        if validate_risk and not await self._validate_stop_order(
+            symbol, quantity, action, stop_price
+        ):
+            logger.warning(
+                f"Stop order validation failed: {action} {quantity} {symbol} stop @ ${stop_price}"
+            )
             return None
 
         # Place order based on trading mode
         if self.config.trading.mode == "live" and self.ibkr:
-            return await self.ibkr.place_stop_order(symbol, quantity, action, stop_price)
+            return await self.ibkr.place_stop_order(
+                symbol, quantity, action, stop_price
+            )
         elif self.config.trading.mode == "paper" and self.paper:
-            return await self.paper.place_stop_order(symbol, quantity, action, stop_price)
+            return await self.paper.place_stop_order(
+                symbol, quantity, action, stop_price
+            )
         else:
             logger.error("No valid trading client available")
             return None
 
-    async def place_bracket_order(self, symbol: str, quantity: int, action: str,
-                                entry_price: float, stop_price: float,
-                                target_price: Optional[float] = None) -> Optional[Dict[str, str]]:
+    async def place_bracket_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        entry_price: float,
+        stop_price: float,
+        target_price: Optional[float] = None,
+    ) -> Optional[Dict[str, str]]:
         """
         Place a bracket order (entry + stop + optional target).
 
@@ -154,8 +191,12 @@ class OrderManager:
             Dict with order IDs if successful, None otherwise
         """
         # Validate bracket order
-        if not await self._validate_bracket_order(symbol, quantity, action, entry_price, stop_price, target_price):
-            logger.warning(f"Bracket order validation failed: {action} {quantity} {symbol}")
+        if not await self._validate_bracket_order(
+            symbol, quantity, action, entry_price, stop_price, target_price
+        ):
+            logger.warning(
+                f"Bracket order validation failed: {action} {quantity} {symbol}"
+            )
             return None
 
         # For now, implement as separate orders
@@ -164,32 +205,41 @@ class OrderManager:
 
         try:
             # Place entry order
-            if action == 'BUY':
-                entry_order_id = await self.place_limit_order(symbol, quantity, 'BUY', entry_price)
+            if action == "BUY":
+                entry_order_id = await self.place_limit_order(
+                    symbol, quantity, "BUY", entry_price
+                )
             else:
-                entry_order_id = await self.place_limit_order(symbol, quantity, 'SELL', entry_price)
+                entry_order_id = await self.place_limit_order(
+                    symbol, quantity, "SELL", entry_price
+                )
 
             if entry_order_id:
-                order_ids['entry'] = entry_order_id
+                order_ids["entry"] = entry_order_id
 
                 # Place stop order (would be attached in real bracket order)
-                stop_order_id = await self.place_stop_order(symbol, quantity,
-                                                          'SELL' if action == 'BUY' else 'BUY',
-                                                          stop_price)
+                stop_order_id = await self.place_stop_order(
+                    symbol, quantity, "SELL" if action == "BUY" else "BUY", stop_price
+                )
                 if stop_order_id:
-                    order_ids['stop'] = stop_order_id
+                    order_ids["stop"] = stop_order_id
 
                 # Place target order if specified
                 if target_price:
-                    target_order_id = await self.place_limit_order(symbol, quantity,
-                                                                 'SELL' if action == 'BUY' else 'BUY',
-                                                                 target_price)
+                    target_order_id = await self.place_limit_order(
+                        symbol,
+                        quantity,
+                        "SELL" if action == "BUY" else "BUY",
+                        target_price,
+                    )
                     if target_order_id:
-                        order_ids['target'] = target_order_id
+                        order_ids["target"] = target_order_id
 
-                logger.info(f"Bracket order placed: {action} {quantity} {symbol} "
-                          f"entry@${entry_price} stop@${stop_price}"
-                          f"{f' target@${target_price}' if target_price else ''}")
+                logger.info(
+                    f"Bracket order placed: {action} {quantity} {symbol} "
+                    f"entry@${entry_price} stop@${stop_price}"
+                    f"{f' target@${target_price}' if target_price else ''}"
+                )
                 return order_ids
             else:
                 logger.error("Failed to place entry order for bracket")
@@ -238,8 +288,13 @@ class OrderManager:
 
     # Risk Validation Methods
 
-    async def _validate_order(self, symbol: str, quantity: int, action: str,
-                            limit_price: Optional[float] = None) -> bool:
+    async def _validate_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        limit_price: Optional[float] = None,
+    ) -> bool:
         """
         Validate order against risk limits.
 
@@ -258,7 +313,7 @@ class OrderManager:
             if not current_price:
                 if self.ibkr and self.ibkr.connected:
                     quote = await self.ibkr.get_quote(symbol)
-                    current_price = quote.get('last') if quote else None
+                    current_price = quote.get("last") if quote else None
                 elif self.paper:
                     current_price = await self.paper._get_market_price(symbol)
 
@@ -271,30 +326,40 @@ class OrderManager:
             max_position_pct = self.config.max_position_size
 
             # For buys, check if this exceeds position limits
-            if action == 'BUY':
+            if action == "BUY":
                 portfolio_value = await self._get_portfolio_value()
                 if portfolio_value > 0:
                     position_pct = position_value / portfolio_value
                     if position_pct > max_position_pct:
-                        logger.warning(f"Position size {position_pct:.1%} exceeds limit {max_position_pct:.1%}")
+                        logger.warning(
+                            f"Position size {position_pct:.1%} exceeds limit {max_position_pct:.1%}"
+                        )
                         return False
 
                 # Check concentration limits
                 existing_position = await self._get_position(symbol)
                 if existing_position:
-                    existing_value = existing_position['quantity'] * existing_position['avg_cost']
+                    existing_value = (
+                        existing_position["quantity"] * existing_position["avg_cost"]
+                    )
                     total_value = existing_value + position_value
                     concentration_pct = total_value / portfolio_value
                     max_concentration = self.config.max_concentration or 0.25
                     if concentration_pct > max_concentration:
-                        logger.warning(f"Concentration {concentration_pct:.1%} exceeds limit {max_concentration:.1%}")
+                        logger.warning(
+                            f"Concentration {concentration_pct:.1%} exceeds limit {max_concentration:.1%}"
+                        )
                         return False
 
             # Check portfolio heat if risk manager available
             if self.risk:
-                heat_check = await self.risk.check_portfolio_heat(symbol, quantity, action, current_price)
-                if not heat_check['approved']:
-                    logger.warning(f"Portfolio heat check failed: {heat_check['reason']}")
+                heat_check = await self.risk.check_portfolio_heat(
+                    symbol, quantity, action, current_price
+                )
+                if not heat_check["approved"]:
+                    logger.warning(
+                        f"Portfolio heat check failed: {heat_check['reason']}"
+                    )
                     return False
 
             return True
@@ -303,7 +368,9 @@ class OrderManager:
             logger.error(f"Error validating order: {e}")
             return False
 
-    async def _validate_stop_order(self, symbol: str, quantity: int, action: str, stop_price: float) -> bool:
+    async def _validate_stop_order(
+        self, symbol: str, quantity: int, action: str, stop_price: float
+    ) -> bool:
         """
         Validate stop order logic.
 
@@ -317,18 +384,24 @@ class OrderManager:
             bool: True if valid
         """
         # For stop orders, mainly check that we have a position to sell
-        if action == 'SELL':
+        if action == "SELL":
             position = await self._get_position(symbol)
-            if not position or position['quantity'] < quantity:
+            if not position or position["quantity"] < quantity:
                 logger.warning(f"Insufficient position for stop order: {symbol}")
                 return False
 
         # Additional validation could check stop distance, etc.
         return True
 
-    async def _validate_bracket_order(self, symbol: str, quantity: int, action: str,
-                                    entry_price: float, stop_price: float,
-                                    target_price: Optional[float] = None) -> bool:
+    async def _validate_bracket_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        entry_price: float,
+        stop_price: float,
+        target_price: Optional[float] = None,
+    ) -> bool:
         """
         Validate bracket order logic.
 
@@ -344,7 +417,7 @@ class OrderManager:
             bool: True if valid
         """
         # Validate entry vs stop makes sense
-        if action == 'BUY':
+        if action == "BUY":
             if stop_price >= entry_price:
                 logger.warning("Stop price must be below entry price for buy orders")
                 return False
@@ -366,7 +439,9 @@ class OrderManager:
             rr_ratio = reward / risk
             min_rr_ratio = 2.0  # Require at least 2:1 reward to risk
             if rr_ratio < min_rr_ratio:
-                logger.warning(f"Risk/reward ratio {rr_ratio:.1f} below minimum {min_rr_ratio}")
+                logger.warning(
+                    f"Risk/reward ratio {rr_ratio:.1f} below minimum {min_rr_ratio}"
+                )
                 return False
 
         return True
@@ -377,7 +452,7 @@ class OrderManager:
         """Get current portfolio value."""
         if self.config.trading.mode == "live" and self.ibkr:
             summary = await self.ibkr.get_account_summary()
-            return float(summary.get('NetLiquidation', 0))
+            return float(summary.get("NetLiquidation", 0))
         elif self.config.trading.mode == "paper" and self.paper:
             return self.paper.get_portfolio_value()
         return 0
@@ -405,7 +480,7 @@ class OrderManager:
         # This would query the broker for order status
         # For now, return basic status
         logger.warning("get_order_status not fully implemented")
-        return {'order_id': order_id, 'status': 'UNKNOWN'}
+        return {"order_id": order_id, "status": "UNKNOWN"}
 
     async def get_open_orders(self) -> List[Dict[str, Any]]:
         """
@@ -420,8 +495,9 @@ class OrderManager:
 
     # Utility Methods
 
-    def calculate_position_size(self, symbol: str, entry_price: float,
-                              stop_price: float, risk_pct: float = 0.02) -> int:
+    def calculate_position_size(
+        self, symbol: str, entry_price: float, stop_price: float, risk_pct: float = 0.02
+    ) -> int:
         """
         Calculate position size based on risk management rules.
 

@@ -7,18 +7,23 @@ Handles connection management, order placement, position tracking, and market da
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from ib_insync import IB, Stock, Contract, Order, MarketOrder, LimitOrder, StopOrder, BracketOrder
-from ib_insync import AccountValue, Position, Trade, Ticker, BarDataList
-from ib_insync.contract import ComboLeg, ContractDetails
+from ib_insync import (
+    IB,
+    BarDataList,
+    Contract,
+    LimitOrder,
+    MarketOrder,
+    Stock,
+    StopOrder,
+    Ticker,
+)
+from ib_insync.contract import ContractDetails
 from ib_insync.order import OrderStatus
-from ib_insync.util import df
 
 from ..config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +66,9 @@ class IBKRClient:
         self.ib.disconnectedEvent += self._on_disconnected
         self.ib.errorEvent += self._on_error
 
-        logger.info(f"IBKR Client initialized for {'paper' if self.readonly else 'live'} trading")
+        logger.info(
+            f"IBKR Client initialized for {'paper' if self.readonly else 'live'} trading"
+        )
 
     async def connect(self) -> bool:
         """
@@ -71,7 +78,9 @@ class IBKRClient:
             bool: True if connection successful
         """
         try:
-            logger.info(f"Connecting to IBKR at {self.host}:{self.port} (client_id={self.client_id})")
+            logger.info(
+                f"Connecting to IBKR at {self.host}:{self.port} (client_id={self.client_id})"
+            )
 
             # Connect to IBKR
             await self.ib.connectAsync(
@@ -79,7 +88,7 @@ class IBKRClient:
                 port=self.port,
                 clientId=self.client_id,
                 readonly=self.readonly,
-                timeout=30
+                timeout=30,
             )
 
             # Wait for connection confirmation
@@ -88,7 +97,9 @@ class IBKRClient:
             if self.ib.isConnected():
                 self.connected = True
                 self.account_id = await self._get_account_id()
-                logger.info(f"Successfully connected to IBKR - Account: {self.account_id}")
+                logger.info(
+                    f"Successfully connected to IBKR - Account: {self.account_id}"
+                )
                 return True
             else:
                 logger.error("Failed to connect to IBKR")
@@ -125,7 +136,13 @@ class IBKRClient:
         logger.warning("IBKR connection lost")
         self.connected = False
 
-    def _on_error(self, reqId: int, errorCode: int, errorString: str, contract: Optional[Contract] = None):
+    def _on_error(
+        self,
+        reqId: int,
+        errorCode: int,
+        errorString: str,
+        contract: Optional[Contract] = None,
+    ):
         """Handle IBKR errors."""
         logger.error(f"IBKR Error [{errorCode}]: {errorString}")
 
@@ -163,7 +180,7 @@ class IBKRClient:
             float: Buying power in dollars
         """
         summary = await self.get_account_summary()
-        return float(summary.get('BuyingPower', 0))
+        return float(summary.get("BuyingPower", 0))
 
     async def get_cash_balance(self) -> float:
         """
@@ -173,7 +190,7 @@ class IBKRClient:
             float: Cash balance in dollars
         """
         summary = await self.get_account_summary()
-        return float(summary.get('TotalCashValue', 0))
+        return float(summary.get("TotalCashValue", 0))
 
     # Position Methods
 
@@ -193,14 +210,16 @@ class IBKRClient:
             result = []
             for pos in positions:
                 if pos.account == self.account_id:
-                    result.append({
-                        'symbol': pos.contract.symbol,
-                        'position': pos.position,
-                        'avg_cost': pos.avgCost,
-                        'market_value': pos.marketValue,
-                        'unrealized_pnl': pos.unrealizedPNL,
-                        'realized_pnl': pos.realizedPNL
-                    })
+                    result.append(
+                        {
+                            "symbol": pos.contract.symbol,
+                            "position": pos.position,
+                            "avg_cost": pos.avgCost,
+                            "market_value": pos.marketValue,
+                            "unrealized_pnl": pos.unrealizedPNL,
+                            "realized_pnl": pos.realizedPNL,
+                        }
+                    )
 
             return result
 
@@ -220,7 +239,7 @@ class IBKRClient:
         """
         positions = await self.get_positions()
         for pos in positions:
-            if pos['symbol'] == symbol:
+            if pos["symbol"] == symbol:
                 return pos
         return None
 
@@ -240,22 +259,22 @@ class IBKRClient:
             raise ConnectionError("Not connected to IBKR")
 
         try:
-            contract = Stock(symbol, 'SMART', 'USD')
+            contract = Stock(symbol, "SMART", "USD")
             await self.ib.qualifyContractsAsync(contract)
 
-            ticker = self.ib.reqMktData(contract, '', False, False)
+            ticker = self.ib.reqMktData(contract, "", False, False)
 
             # Wait for data
             await asyncio.sleep(2)
 
             if ticker.last:
                 return {
-                    'symbol': symbol,
-                    'bid': ticker.bid,
-                    'ask': ticker.ask,
-                    'last': ticker.last,
-                    'volume': ticker.volume,
-                    'timestamp': datetime.now()
+                    "symbol": symbol,
+                    "bid": ticker.bid,
+                    "ask": ticker.ask,
+                    "last": ticker.last,
+                    "volume": ticker.volume,
+                    "timestamp": datetime.now(),
                 }
 
         except Exception as e:
@@ -280,10 +299,10 @@ class IBKRClient:
 
         for symbol in symbols:
             try:
-                contract = Stock(symbol, 'SMART', 'USD')
+                contract = Stock(symbol, "SMART", "USD")
                 await self.ib.qualifyContractsAsync(contract)
 
-                ticker = self.ib.reqMktData(contract, '', False, False)
+                ticker = self.ib.reqMktData(contract, "", False, False)
                 subscriptions[symbol] = ticker
 
             except Exception as e:
@@ -309,7 +328,9 @@ class IBKRClient:
 
     # Order Methods
 
-    async def place_market_order(self, symbol: str, quantity: int, action: str) -> Optional[str]:
+    async def place_market_order(
+        self, symbol: str, quantity: int, action: str
+    ) -> Optional[str]:
         """
         Place a market order.
 
@@ -321,9 +342,11 @@ class IBKRClient:
         Returns:
             Order ID if successful, None otherwise
         """
-        return await self._place_order(symbol, quantity, action, 'MKT')
+        return await self._place_order(symbol, quantity, action, "MKT")
 
-    async def place_limit_order(self, symbol: str, quantity: int, action: str, limit_price: float) -> Optional[str]:
+    async def place_limit_order(
+        self, symbol: str, quantity: int, action: str, limit_price: float
+    ) -> Optional[str]:
         """
         Place a limit order.
 
@@ -336,9 +359,11 @@ class IBKRClient:
         Returns:
             Order ID if successful, None otherwise
         """
-        return await self._place_order(symbol, quantity, action, 'LMT', limit_price)
+        return await self._place_order(symbol, quantity, action, "LMT", limit_price)
 
-    async def place_stop_order(self, symbol: str, quantity: int, action: str, stop_price: float) -> Optional[str]:
+    async def place_stop_order(
+        self, symbol: str, quantity: int, action: str, stop_price: float
+    ) -> Optional[str]:
         """
         Place a stop order.
 
@@ -351,11 +376,19 @@ class IBKRClient:
         Returns:
             Order ID if successful, None otherwise
         """
-        return await self._place_order(symbol, quantity, action, 'STP', stop_price=stop_price)
+        return await self._place_order(
+            symbol, quantity, action, "STP", stop_price=stop_price
+        )
 
-    async def _place_order(self, symbol: str, quantity: int, action: str,
-                          order_type: str, limit_price: Optional[float] = None,
-                          stop_price: Optional[float] = None) -> Optional[str]:
+    async def _place_order(
+        self,
+        symbol: str,
+        quantity: int,
+        action: str,
+        order_type: str,
+        limit_price: Optional[float] = None,
+        stop_price: Optional[float] = None,
+    ) -> Optional[str]:
         """
         Internal method to place orders.
 
@@ -375,15 +408,15 @@ class IBKRClient:
 
         try:
             # Create contract
-            contract = Stock(symbol, 'SMART', 'USD')
+            contract = Stock(symbol, "SMART", "USD")
             await self.ib.qualifyContractsAsync(contract)
 
             # Create order
-            if order_type == 'MKT':
+            if order_type == "MKT":
                 order = MarketOrder(action, quantity)
-            elif order_type == 'LMT':
+            elif order_type == "LMT":
                 order = LimitOrder(action, quantity, limit_price)
-            elif order_type == 'STP':
+            elif order_type == "STP":
                 order = StopOrder(action, quantity, stop_price)
             else:
                 raise ValueError(f"Unsupported order type: {order_type}")
@@ -395,7 +428,9 @@ class IBKRClient:
             await asyncio.sleep(1)
 
             if trade.orderStatus.status == OrderStatus.Submitted:
-                logger.info(f"Order placed: {action} {quantity} {symbol} at {order_type}")
+                logger.info(
+                    f"Order placed: {action} {quantity} {symbol} at {order_type}"
+                )
                 return str(trade.order.orderId)
             else:
                 logger.error(f"Order failed: {trade.orderStatus.status}")
@@ -436,8 +471,9 @@ class IBKRClient:
 
     # Historical Data Methods
 
-    async def get_historical_data(self, symbol: str, duration: str = '1 D',
-                                bar_size: str = '1 min') -> Optional[BarDataList]:
+    async def get_historical_data(
+        self, symbol: str, duration: str = "1 D", bar_size: str = "1 min"
+    ) -> Optional[BarDataList]:
         """
         Get historical data for symbol.
 
@@ -453,17 +489,17 @@ class IBKRClient:
             raise ConnectionError("Not connected to IBKR")
 
         try:
-            contract = Stock(symbol, 'SMART', 'USD')
+            contract = Stock(symbol, "SMART", "USD")
             await self.ib.qualifyContractsAsync(contract)
 
             bars = await self.ib.reqHistoricalDataAsync(
                 contract=contract,
-                endDateTime='',
+                endDateTime="",
                 durationStr=duration,
                 barSizeSetting=bar_size,
-                whatToShow='TRADES',
+                whatToShow="TRADES",
                 useRTH=True,
-                formatDate=1
+                formatDate=1,
             )
 
             return bars
@@ -488,7 +524,7 @@ class IBKRClient:
             raise ConnectionError("Not connected to IBKR")
 
         try:
-            contract = Stock(symbol, 'SMART', 'USD')
+            contract = Stock(symbol, "SMART", "USD")
             details = await self.ib.reqContractDetailsAsync(contract)
 
             if details:

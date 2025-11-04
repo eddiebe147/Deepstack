@@ -6,14 +6,11 @@ Generates trade theses and recommendations for the DeepStack trading system.
 """
 
 import logging
-import json
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List
 
-from .base_agent import BaseAgent, Tool, ToolCall, AgentResponse
-from ..config import get_config
-
+from .base_agent import AgentResponse, BaseAgent, Tool
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StockAnalysis:
     """Analysis result for a stock."""
+
     symbol: str
     deep_value_score: float
     squeeze_score: float
@@ -38,6 +36,7 @@ class StockAnalysis:
 @dataclass
 class SqueezeData:
     """Short squeeze data for a stock."""
+
     short_interest_pct: float
     days_to_cover: float
     cost_to_borrow: float
@@ -61,7 +60,7 @@ class StrategyAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="StrategyAgent",
-            description="Expert in deep value investing and short squeeze detection, analyzing stocks for asymmetric opportunities with clear catalysts and risk management."
+            description="Expert in deep value investing and short squeeze detection, analyzing stocks for asymmetric opportunities with clear catalysts and risk management.",
         )
 
         # Register tools
@@ -84,12 +83,15 @@ class StrategyAgent(BaseAgent):
                 input_schema={
                     "type": "object",
                     "properties": {
-                        "symbol": {"type": "string", "description": "Stock symbol (e.g., AAPL)"}
+                        "symbol": {
+                            "type": "string",
+                            "description": "Stock symbol (e.g., AAPL)",
+                        }
                     },
-                    "required": ["symbol"]
-                }
+                    "required": ["symbol"],
+                },
             ),
-            self._handle_get_stock_quote
+            self._handle_get_stock_quote,
         )
 
         self.register_tool(
@@ -101,10 +103,10 @@ class StrategyAgent(BaseAgent):
                     "properties": {
                         "symbol": {"type": "string", "description": "Stock symbol"}
                     },
-                    "required": ["symbol"]
-                }
+                    "required": ["symbol"],
+                },
             ),
-            self._handle_get_fundamentals
+            self._handle_get_fundamentals,
         )
 
         self.register_tool(
@@ -116,10 +118,10 @@ class StrategyAgent(BaseAgent):
                     "properties": {
                         "symbol": {"type": "string", "description": "Stock symbol"}
                     },
-                    "required": ["symbol"]
-                }
+                    "required": ["symbol"],
+                },
             ),
-            self._handle_get_short_interest
+            self._handle_get_short_interest,
         )
 
         self.register_tool(
@@ -130,12 +132,12 @@ class StrategyAgent(BaseAgent):
                     "type": "object",
                     "properties": {
                         "symbol": {"type": "string", "description": "Stock symbol"},
-                        "sector": {"type": "string", "description": "Sector name"}
+                        "sector": {"type": "string", "description": "Sector name"},
                     },
-                    "required": ["symbol"]
-                }
+                    "required": ["symbol"],
+                },
             ),
-            self._handle_analyze_sector
+            self._handle_analyze_sector,
         )
 
         self.register_tool(
@@ -145,15 +147,30 @@ class StrategyAgent(BaseAgent):
                 input_schema={
                     "type": "object",
                     "properties": {
-                        "min_market_cap": {"type": "number", "description": "Minimum market cap in millions"},
-                        "max_pe": {"type": "number", "description": "Maximum P/E ratio"},
-                        "max_pb": {"type": "number", "description": "Maximum P/B ratio"},
-                        "min_roe": {"type": "number", "description": "Minimum ROE percentage"},
-                        "limit": {"type": "integer", "description": "Maximum results to return"}
-                    }
-                }
+                        "min_market_cap": {
+                            "type": "number",
+                            "description": "Minimum market cap in millions",
+                        },
+                        "max_pe": {
+                            "type": "number",
+                            "description": "Maximum P/E ratio",
+                        },
+                        "max_pb": {
+                            "type": "number",
+                            "description": "Maximum P/B ratio",
+                        },
+                        "min_roe": {
+                            "type": "number",
+                            "description": "Minimum ROE percentage",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum results to return",
+                        },
+                    },
+                },
             ),
-            self._handle_scan_value_stocks
+            self._handle_scan_value_stocks,
         )
 
     async def _handle_get_stock_quote(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -167,7 +184,7 @@ class StrategyAgent(BaseAgent):
             "price": 150.0 + (hash(symbol) % 100),  # Mock price
             "volume": 1000000,
             "market_cap": 50000000000,
-            "sector": "Technology"
+            "sector": "Technology",
         }
 
     async def _handle_get_fundamentals(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -183,7 +200,7 @@ class StrategyAgent(BaseAgent):
             "debt_equity": 0.3 + (hash(symbol) % 0.4),
             "current_ratio": 1.2 + (hash(symbol) % 0.8),
             "fcf_yield": 0.05 + (hash(symbol) % 0.05),
-            "dividend_yield": 0.02 + (hash(symbol) % 0.02)
+            "dividend_yield": 0.02 + (hash(symbol) % 0.02),
         }
 
         return base_data
@@ -208,7 +225,7 @@ class StrategyAgent(BaseAgent):
             "days_to_cover": days_to_cover,
             "cost_to_borrow": borrow_cost,
             "float_available_pct": float_available,
-            "squeeze_score": squeeze_score
+            "squeeze_score": squeeze_score,
         }
 
     async def _handle_analyze_sector(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -220,15 +237,13 @@ class StrategyAgent(BaseAgent):
             "symbol": symbol,
             "sector": "Technology",
             "sector_performance": 0.12,  # 12% sector return
-            "relative_strength": 0.85,   # 85th percentile
-            "peer_comparison": {
-                "avg_pe": 18.5,
-                "avg_pb": 2.1,
-                "avg_roe": 0.15
-            }
+            "relative_strength": 0.85,  # 85th percentile
+            "peer_comparison": {"avg_pe": 18.5, "avg_pb": 2.1, "avg_roe": 0.15},
         }
 
-    async def _handle_scan_value_stocks(self, args: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_scan_value_stocks(
+        self, args: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Scan for undervalued stocks."""
         # Mock scan results
         mock_stocks = [
@@ -236,21 +251,28 @@ class StrategyAgent(BaseAgent):
             {"symbol": "MSFT", "pe": 15.7, "pb": 1.2, "roe": 0.22, "fcf_yield": 0.06},
             {"symbol": "GOOGL", "pe": 11.2, "pb": 0.7, "roe": 0.16, "fcf_yield": 0.09},
             {"symbol": "TSLA", "pe": 45.8, "pb": 3.2, "roe": 0.08, "fcf_yield": 0.02},
-            {"symbol": "NVDA", "pe": 22.1, "pb": 2.8, "roe": 0.25, "fcf_yield": 0.04}
+            {"symbol": "NVDA", "pe": 22.1, "pb": 2.8, "roe": 0.25, "fcf_yield": 0.04},
         ]
 
         # Filter based on criteria
         filtered = []
         for stock in mock_stocks:
-            if (stock["pe"] <= args.get("max_pe", 20) and
-                stock["pb"] <= args.get("max_pb", 2.0) and
-                stock["roe"] >= args.get("min_roe", 0.10)):
+            if (
+                stock["pe"] <= args.get("max_pe", 20)
+                and stock["pb"] <= args.get("max_pb", 2.0)
+                and stock["roe"] >= args.get("min_roe", 0.10)
+            ):
                 filtered.append(stock)
 
-        return filtered[:args.get("limit", 10)]
+        return filtered[: args.get("limit", 10)]
 
-    def _calculate_squeeze_score(self, short_interest: float, days_to_cover: float,
-                               borrow_cost: float, float_available: float) -> float:
+    def _calculate_squeeze_score(
+        self,
+        short_interest: float,
+        days_to_cover: float,
+        borrow_cost: float,
+        float_available: float,
+    ) -> float:
         """
         Calculate squeeze score (0-100).
 
@@ -265,9 +287,9 @@ class StrategyAgent(BaseAgent):
         """
         # Normalize each factor
         short_score = min(short_interest / 0.7, 1.0) * 40  # Max 40 points
-        days_score = min(days_to_cover / 10, 1.0) * 30     # Max 30 points
-        borrow_score = min(borrow_cost / 0.20, 1.0) * 20   # Max 20 points
-        availability_score = (1 - float_available) * 10     # Max 10 points
+        days_score = min(days_to_cover / 10, 1.0) * 30  # Max 30 points
+        borrow_score = min(borrow_cost / 0.20, 1.0) * 20  # Max 20 points
+        availability_score = (1 - float_available) * 10  # Max 10 points
 
         total_score = short_score + days_score + borrow_score + availability_score
 
@@ -317,7 +339,9 @@ class StrategyAgent(BaseAgent):
 
         # Set target and stop prices
         current_price = quote_data["price"]
-        target_price = current_price * (1 + (overall_score / 100) * 0.5)  # 50% of score as upside
+        target_price = current_price * (
+            1 + (overall_score / 100) * 0.5
+        )  # 50% of score as upside
         stop_price = current_price * (1 - 0.08)  # 8% stop loss
 
         # Determine recommendation
@@ -344,7 +368,7 @@ class StrategyAgent(BaseAgent):
             target_price=target_price,
             stop_price=stop_price,
             position_size_pct=position_size_pct,
-            confidence=confidence
+            confidence=confidence,
         )
 
     def _calculate_deep_value_score(self, fundamentals: Dict[str, Any]) -> float:
@@ -427,8 +451,13 @@ class StrategyAgent(BaseAgent):
 
         return min(score, 100.0)
 
-    def _generate_thesis(self, symbol: str, quote: Dict[str, Any],
-                        fundamentals: Dict[str, Any], squeeze: Dict[str, Any]) -> str:
+    def _generate_thesis(
+        self,
+        symbol: str,
+        quote: Dict[str, Any],
+        fundamentals: Dict[str, Any],
+        squeeze: Dict[str, Any],
+    ) -> str:
         """
         Generate investment thesis for the stock.
 
@@ -473,7 +502,9 @@ class StrategyAgent(BaseAgent):
             )
 
         # Risk/reward summary
-        upside_potential = (squeeze.get("squeeze_score", 0) + fundamentals.get("fcf_yield", 0) * 1000) / 100
+        upside_potential = (
+            squeeze.get("squeeze_score", 0) + fundamentals.get("fcf_yield", 0) * 1000
+        ) / 100
         downside_risk = 0.08  # 8% stop loss
 
         thesis_parts.append(
@@ -481,10 +512,13 @@ class StrategyAgent(BaseAgent):
             f"{downside_risk:.0%} downside risk."
         )
 
-        return " ".join(thesis_parts) if thesis_parts else f"{symbol} analysis completed."
+        return (
+            " ".join(thesis_parts) if thesis_parts else f"{symbol} analysis completed."
+        )
 
-    def _identify_catalysts(self, symbol: str, fundamentals: Dict[str, Any],
-                          squeeze: Dict[str, Any]) -> List[str]:
+    def _identify_catalysts(
+        self, symbol: str, fundamentals: Dict[str, Any], squeeze: Dict[str, Any]
+    ) -> List[str]:
         """
         Identify potential catalysts for the stock.
 
@@ -514,8 +548,9 @@ class StrategyAgent(BaseAgent):
 
         return catalysts
 
-    def _identify_risks(self, symbol: str, fundamentals: Dict[str, Any],
-                       squeeze: Dict[str, Any]) -> List[str]:
+    def _identify_risks(
+        self, symbol: str, fundamentals: Dict[str, Any], squeeze: Dict[str, Any]
+    ) -> List[str]:
         """
         Identify key risks for the stock.
 
@@ -550,7 +585,9 @@ class StrategyAgent(BaseAgent):
 
         return risks
 
-    def _calculate_position_size(self, overall_score: float, squeeze_score: float) -> float:
+    def _calculate_position_size(
+        self, overall_score: float, squeeze_score: float
+    ) -> float:
         """
         Calculate recommended position size as percentage.
 
@@ -624,15 +661,15 @@ class StrategyAgent(BaseAgent):
                 metadata={
                     "symbol": symbol,
                     "analysis": analysis.__dict__,
-                    "timestamp": datetime.now().isoformat()
-                }
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
         except Exception as e:
             logger.error(f"Error analyzing {symbol}: {e}")
             return AgentResponse(
                 content=f"I apologize, but I encountered an error analyzing {symbol}: {str(e)}",
-                metadata={"error": str(e)}
+                metadata={"error": str(e)},
             )
 
     async def scan_opportunities(self, strategy: str = "both") -> AgentResponse:
@@ -650,12 +687,14 @@ class StrategyAgent(BaseAgent):
 
             if strategy in ["deep_value", "both"]:
                 # Scan for value stocks
-                value_stocks = await self._handle_scan_value_stocks({
-                    "max_pe": self.deep_value_config.criteria.get("p_e_max", 15),
-                    "max_pb": self.deep_value_config.criteria.get("p_b_max", 1.0),
-                    "min_roe": self.deep_value_config.criteria.get("roe_min", 0.15),
-                    "limit": 10
-                })
+                value_stocks = await self._handle_scan_value_stocks(
+                    {
+                        "max_pe": self.deep_value_config.criteria.get("p_e_max", 15),
+                        "max_pb": self.deep_value_config.criteria.get("p_b_max", 1.0),
+                        "min_roe": self.deep_value_config.criteria.get("roe_min", 0.15),
+                        "limit": 10,
+                    }
+                )
 
                 for stock in value_stocks:
                     analysis = await self.analyze_stock(stock["symbol"])
@@ -698,13 +737,13 @@ class StrategyAgent(BaseAgent):
                 metadata={
                     "strategy": strategy,
                     "opportunities_count": len(opportunities),
-                    "timestamp": datetime.now().isoformat()
-                }
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
         except Exception as e:
             logger.error(f"Error scanning opportunities: {e}")
             return AgentResponse(
                 content=f"I apologize, but I encountered an error scanning for opportunities: {str(e)}",
-                metadata={"error": str(e)}
+                metadata={"error": str(e)},
             )

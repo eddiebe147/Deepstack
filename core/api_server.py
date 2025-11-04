@@ -6,24 +6,23 @@ the trading engine, agents, and market data.
 """
 
 import logging
-import asyncio
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .config import get_config
 from .broker.ibkr_client import IBKRClient
-from .broker.paper_trader import PaperTrader
 from .broker.order_manager import OrderManager
-
+from .broker.paper_trader import PaperTrader
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
 
 # Pydantic models for API requests/responses
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -103,7 +102,7 @@ class DeepStackAPIServer:
         self._setup_middleware()
         self._setup_routes()
         self._setup_websocket()
-        
+
         # Initialize trading components synchronously
         self._initialize_components()
 
@@ -125,10 +124,7 @@ class DeepStackAPIServer:
         @self.app.get("/health", response_model=HealthResponse)
         async def health_check():
             """Health check endpoint."""
-            return HealthResponse(
-                status="healthy",
-                timestamp=datetime.now()
-            )
+            return HealthResponse(status="healthy", timestamp=datetime.now())
 
         @self.app.get("/quote/{symbol}", response_model=QuoteResponse)
         async def get_quote(symbol: str):
@@ -142,18 +138,20 @@ class DeepStackAPIServer:
                     if price is not None:
                         # Provide basic quote fields for paper mode
                         quote = {
-                            'symbol': symbol,
-                            'bid': price - 0.02,
-                            'ask': price + 0.02,
-                            'last': price,
-                            'volume': 0,
-                            'timestamp': datetime.now()
+                            "symbol": symbol,
+                            "bid": price - 0.02,
+                            "ask": price + 0.02,
+                            "last": price,
+                            "volume": 0,
+                            "timestamp": datetime.now(),
                         }
 
                 if quote:
                     return QuoteResponse(**quote)
                 else:
-                    raise HTTPException(status_code=404, detail=f"Quote not available for {symbol}")
+                    raise HTTPException(
+                        status_code=404, detail=f"Quote not available for {symbol}"
+                    )
             except Exception as e:
                 logger.error(f"Error getting quote for {symbol}: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -184,12 +182,12 @@ class DeepStackAPIServer:
                     buying_power=0.0,
                     portfolio_value=0.0,
                     day_pnl=0.0,
-                    total_pnl=0.0
+                    total_pnl=0.0,
                 )
 
                 if self.config.trading.mode == "live" and self.ibkr_client:
                     account_data = await self.ibkr_client.get_account_summary()
-                    summary.cash = float(account_data.get('TotalCashValue', 0))
+                    summary.cash = float(account_data.get("TotalCashValue", 0))
                     summary.buying_power = await self.ibkr_client.get_buying_power()
                 elif self.config.trading.mode == "paper" and self.paper_trader:
                     summary.cash = self.paper_trader.cash
@@ -206,7 +204,9 @@ class DeepStackAPIServer:
             """Place an order."""
             try:
                 if not self.order_manager:
-                    raise HTTPException(status_code=500, detail="Order manager not initialized")
+                    raise HTTPException(
+                        status_code=500, detail="Order manager not initialized"
+                    )
 
                 order_id = None
 
@@ -216,30 +216,39 @@ class DeepStackAPIServer:
                     )
                 elif order.order_type == "LMT":
                     if order.limit_price is None:
-                        raise HTTPException(status_code=400, detail="Limit price required for limit orders")
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Limit price required for limit orders",
+                        )
                     order_id = await self.order_manager.place_limit_order(
                         order.symbol, order.quantity, order.action, order.limit_price
                     )
                 elif order.order_type == "STP":
                     if order.stop_price is None:
-                        raise HTTPException(status_code=400, detail="Stop price required for stop orders")
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Stop price required for stop orders",
+                        )
                     order_id = await self.order_manager.place_stop_order(
                         order.symbol, order.quantity, order.action, order.stop_price
                     )
                 else:
-                    raise HTTPException(status_code=400, detail=f"Unsupported order type: {order.order_type}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unsupported order type: {order.order_type}",
+                    )
 
                 if order_id:
                     return OrderResponse(
                         order_id=order_id,
                         status="submitted",
-                        message=f"Order {order_id} submitted successfully"
+                        message=f"Order {order_id} submitted successfully",
                     )
                 else:
                     return OrderResponse(
                         order_id=None,
                         status="failed",
-                        message="Order submission failed"
+                        message="Order submission failed",
                     )
 
             except Exception as e:
@@ -251,14 +260,19 @@ class DeepStackAPIServer:
             """Cancel an order."""
             try:
                 if not self.order_manager:
-                    raise HTTPException(status_code=500, detail="Order manager not initialized")
+                    raise HTTPException(
+                        status_code=500, detail="Order manager not initialized"
+                    )
 
                 success = await self.order_manager.cancel_order(order_id)
 
                 if success:
                     return {"status": "cancelled", "order_id": order_id}
                 else:
-                    raise HTTPException(status_code=404, detail=f"Order {order_id} not found or could not be cancelled")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Order {order_id} not found or could not be cancelled",
+                    )
 
             except Exception as e:
                 logger.error(f"Error cancelling order {order_id}: {e}")
@@ -298,9 +312,9 @@ class DeepStackAPIServer:
             data: Update data
         """
         message = {
-            'type': update_type,
-            'timestamp': datetime.now().isoformat(),
-            'data': data
+            "type": update_type,
+            "timestamp": datetime.now().isoformat(),
+            "data": data,
         }
 
         disconnected = []
@@ -319,7 +333,10 @@ class DeepStackAPIServer:
         """Initialize trading components synchronously."""
         try:
             # Initialize IBKR client
-            if self.config.trading.mode == "live" or self.config.trading.mode == "paper":
+            if (
+                self.config.trading.mode == "live"
+                or self.config.trading.mode == "paper"
+            ):
                 self.ibkr_client = IBKRClient(self.config)
 
             # Initialize paper trader
@@ -328,12 +345,10 @@ class DeepStackAPIServer:
 
             # Initialize order manager
             from ..risk.portfolio_risk import PortfolioRisk
+
             risk_manager = PortfolioRisk(self.config)
             self.order_manager = OrderManager(
-                self.config,
-                self.ibkr_client,
-                self.paper_trader,
-                risk_manager
+                self.config, self.ibkr_client, self.paper_trader, risk_manager
             )
 
             logger.info("Trading components initialized successfully")
@@ -346,7 +361,10 @@ class DeepStackAPIServer:
         """Initialize trading components (IBKR client, paper trader, etc.)."""
         try:
             # Initialize IBKR client
-            if self.config.trading.mode == "live" or self.config.trading.mode == "paper":
+            if (
+                self.config.trading.mode == "live"
+                or self.config.trading.mode == "paper"
+            ):
                 self.ibkr_client = IBKRClient(self.config)
                 if self.config.trading.mode == "live":
                     # Only connect for live trading
@@ -360,12 +378,10 @@ class DeepStackAPIServer:
 
             # Initialize order manager
             from ..risk.portfolio_risk import PortfolioRisk
+
             risk_manager = PortfolioRisk(self.config)
             self.order_manager = OrderManager(
-                self.config,
-                self.ibkr_client,
-                self.paper_trader,
-                risk_manager
+                self.config, self.ibkr_client, self.paper_trader, risk_manager
             )
 
             logger.info("Trading components initialized successfully")

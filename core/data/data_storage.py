@@ -5,16 +5,15 @@ Handles database operations, file storage, and data persistence for
 trading data, configurations, and analytics.
 """
 
-import sqlite3
-import json
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+import sqlite3
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 
 from ..config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +61,19 @@ class DataStorage:
         try:
             with sqlite3.connect(self.main_db) as conn:
                 # System configuration and state
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS system_config (
                         key TEXT PRIMARY KEY,
                         value TEXT,
                         updated_at TIMESTAMP
                     )
-                ''')
+                """
+                )
 
                 # Trading sessions
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS trading_sessions (
                         session_id TEXT PRIMARY KEY,
                         start_time TIMESTAMP,
@@ -80,16 +82,19 @@ class DataStorage:
                         status TEXT,
                         notes TEXT
                     )
-                ''')
+                """
+                )
 
                 # API keys and credentials (encrypted)
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS credentials (
                         provider TEXT PRIMARY KEY,
                         api_key_encrypted TEXT,
                         updated_at TIMESTAMP
                     )
-                ''')
+                """
+                )
 
                 conn.commit()
 
@@ -101,7 +106,8 @@ class DataStorage:
         try:
             with sqlite3.connect(self.paper_trading_db) as conn:
                 # Positions
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS positions (
                         symbol TEXT PRIMARY KEY,
                         quantity INTEGER,
@@ -111,10 +117,12 @@ class DataStorage:
                         realized_pnl REAL,
                         updated_at TIMESTAMP
                     )
-                ''')
+                """
+                )
 
                 # Orders
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS orders (
                         order_id TEXT PRIMARY KEY,
                         symbol TEXT,
@@ -129,10 +137,12 @@ class DataStorage:
                         created_at TIMESTAMP,
                         updated_at TIMESTAMP
                     )
-                ''')
+                """
+                )
 
                 # Trades
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS trades (
                         trade_id TEXT PRIMARY KEY,
                         symbol TEXT,
@@ -145,10 +155,12 @@ class DataStorage:
                         strategy TEXT,
                         notes TEXT
                     )
-                ''')
+                """
+                )
 
                 # Daily P&L
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS daily_pnl (
                         date DATE PRIMARY KEY,
                         pnl REAL,
@@ -156,7 +168,8 @@ class DataStorage:
                         win_rate REAL,
                         updated_at TIMESTAMP
                     )
-                ''')
+                """
+                )
 
                 conn.commit()
 
@@ -168,7 +181,8 @@ class DataStorage:
         try:
             with sqlite3.connect(self.analytics_db) as conn:
                 # Performance metrics
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS performance_metrics (
                         metric_name TEXT,
                         value REAL,
@@ -176,10 +190,12 @@ class DataStorage:
                         calculated_at TIMESTAMP,
                         PRIMARY KEY (metric_name, period)
                     )
-                ''')
+                """
+                )
 
                 # Strategy performance
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS strategy_performance (
                         strategy_name TEXT,
                         date DATE,
@@ -191,17 +207,20 @@ class DataStorage:
                         sharpe_ratio REAL,
                         PRIMARY KEY (strategy_name, date)
                     )
-                ''')
+                """
+                )
 
                 # Risk metrics
-                conn.execute('''
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS risk_metrics (
                         metric_name TEXT,
                         value REAL,
                         timestamp TIMESTAMP,
                         PRIMARY KEY (metric_name, timestamp)
                     )
-                ''')
+                """
+                )
 
                 conn.commit()
 
@@ -220,10 +239,13 @@ class DataStorage:
         """
         try:
             with sqlite3.connect(self.main_db) as conn:
-                conn.execute('''
+                conn.execute(
+                    """
                     INSERT OR REPLACE INTO system_config (key, value, updated_at)
                     VALUES (?, ?, ?)
-                ''', (key, value, datetime.now()))
+                """,
+                    (key, value, datetime.now()),
+                )
 
                 conn.commit()
 
@@ -242,7 +264,9 @@ class DataStorage:
         """
         try:
             with sqlite3.connect(self.main_db) as conn:
-                cursor = conn.execute("SELECT value FROM system_config WHERE key = ?", (key,))
+                cursor = conn.execute(
+                    "SELECT value FROM system_config WHERE key = ?", (key,)
+                )
                 row = cursor.fetchone()
                 return row[0] if row else None
 
@@ -252,8 +276,15 @@ class DataStorage:
 
     # Paper Trading Storage Methods
 
-    def save_position(self, symbol: str, quantity: int, avg_cost: float,
-                     market_value: float, unrealized_pnl: float, realized_pnl: float):
+    def save_position(
+        self,
+        symbol: str,
+        quantity: int,
+        avg_cost: float,
+        market_value: float,
+        unrealized_pnl: float,
+        realized_pnl: float,
+    ):
         """
         Save position data.
 
@@ -267,11 +298,22 @@ class DataStorage:
         """
         try:
             with sqlite3.connect(self.paper_trading_db) as conn:
-                conn.execute('''
+                conn.execute(
+                    """
                     INSERT OR REPLACE INTO positions
                     (symbol, quantity, avg_cost, market_value, unrealized_pnl, realized_pnl, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (symbol, quantity, avg_cost, market_value, unrealized_pnl, realized_pnl, datetime.now()))
+                """,
+                    (
+                        symbol,
+                        quantity,
+                        avg_cost,
+                        market_value,
+                        unrealized_pnl,
+                        realized_pnl,
+                        datetime.now(),
+                    ),
+                )
 
                 conn.commit()
 
@@ -292,15 +334,17 @@ class DataStorage:
 
                 positions = []
                 for row in rows:
-                    positions.append({
-                        'symbol': row[0],
-                        'quantity': row[1],
-                        'avg_cost': row[2],
-                        'market_value': row[3],
-                        'unrealized_pnl': row[4],
-                        'realized_pnl': row[5],
-                        'updated_at': row[6]
-                    })
+                    positions.append(
+                        {
+                            "symbol": row[0],
+                            "quantity": row[1],
+                            "avg_cost": row[2],
+                            "market_value": row[3],
+                            "unrealized_pnl": row[4],
+                            "realized_pnl": row[5],
+                            "updated_at": row[6],
+                        }
+                    )
 
                 return positions
 
@@ -308,9 +352,18 @@ class DataStorage:
             logger.error(f"Error getting positions: {e}")
             return []
 
-    def save_trade(self, trade_id: str, symbol: str, action: str, quantity: int,
-                  price: float, slippage: float, order_id: str, strategy: str = '',
-                  notes: str = ''):
+    def save_trade(
+        self,
+        trade_id: str,
+        symbol: str,
+        action: str,
+        quantity: int,
+        price: float,
+        slippage: float,
+        order_id: str,
+        strategy: str = "",
+        notes: str = "",
+    ):
         """
         Save trade data.
 
@@ -327,19 +380,34 @@ class DataStorage:
         """
         try:
             with sqlite3.connect(self.paper_trading_db) as conn:
-                conn.execute('''
+                conn.execute(
+                    """
                     INSERT INTO trades
                     (trade_id, symbol, action, quantity, price, slippage, timestamp, order_id, strategy, notes)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (trade_id, symbol, action, quantity, price, slippage,
-                      datetime.now(), order_id, strategy, notes))
+                """,
+                    (
+                        trade_id,
+                        symbol,
+                        action,
+                        quantity,
+                        price,
+                        slippage,
+                        datetime.now(),
+                        order_id,
+                        strategy,
+                        notes,
+                    ),
+                )
 
                 conn.commit()
 
         except Exception as e:
             logger.error(f"Error saving trade {trade_id}: {e}")
 
-    def get_trades(self, limit: int = 100, symbol: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_trades(
+        self, limit: int = 100, symbol: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get recent trades.
 
@@ -355,30 +423,31 @@ class DataStorage:
                 if symbol:
                     cursor = conn.execute(
                         "SELECT * FROM trades WHERE symbol = ? ORDER BY timestamp DESC LIMIT ?",
-                        (symbol, limit)
+                        (symbol, limit),
                     )
                 else:
                     cursor = conn.execute(
-                        "SELECT * FROM trades ORDER BY timestamp DESC LIMIT ?",
-                        (limit,)
+                        "SELECT * FROM trades ORDER BY timestamp DESC LIMIT ?", (limit,)
                     )
 
                 rows = cursor.fetchall()
 
                 trades = []
                 for row in rows:
-                    trades.append({
-                        'trade_id': row[0],
-                        'symbol': row[1],
-                        'action': row[2],
-                        'quantity': row[3],
-                        'price': row[4],
-                        'slippage': row[5],
-                        'timestamp': row[6],
-                        'order_id': row[7],
-                        'strategy': row[8],
-                        'notes': row[9]
-                    })
+                    trades.append(
+                        {
+                            "trade_id": row[0],
+                            "symbol": row[1],
+                            "action": row[2],
+                            "quantity": row[3],
+                            "price": row[4],
+                            "slippage": row[5],
+                            "timestamp": row[6],
+                            "order_id": row[7],
+                            "strategy": row[8],
+                            "notes": row[9],
+                        }
+                    )
 
                 return trades
 
@@ -399,11 +468,14 @@ class DataStorage:
         """
         try:
             with sqlite3.connect(self.analytics_db) as conn:
-                conn.execute('''
+                conn.execute(
+                    """
                     INSERT OR REPLACE INTO performance_metrics
                     (metric_name, value, period, calculated_at)
                     VALUES (?, ?, ?, ?)
-                ''', (metric_name, value, period, datetime.now()))
+                """,
+                    (metric_name, value, period, datetime.now()),
+                )
 
                 conn.commit()
 
@@ -424,7 +496,7 @@ class DataStorage:
             with sqlite3.connect(self.analytics_db) as conn:
                 cursor = conn.execute(
                     "SELECT metric_name, value FROM performance_metrics WHERE period = ?",
-                    (period,)
+                    (period,),
                 )
                 rows = cursor.fetchall()
 
@@ -436,8 +508,12 @@ class DataStorage:
 
     # Export Methods
 
-    def export_trades_to_csv(self, filepath: str, start_date: Optional[datetime] = None,
-                           end_date: Optional[datetime] = None):
+    def export_trades_to_csv(
+        self,
+        filepath: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ):
         """
         Export trades to CSV file.
 
@@ -457,9 +533,9 @@ class DataStorage:
 
             # Filter by date if specified
             if start_date:
-                df = df[df['timestamp'] >= start_date]
+                df = df[df["timestamp"] >= start_date]
             if end_date:
-                df = df[df['timestamp'] <= end_date]
+                df = df[df["timestamp"] <= end_date]
 
             df.to_csv(filepath, index=False)
             logger.info(f"Exported {len(df)} trades to {filepath}")
@@ -501,7 +577,7 @@ class DataStorage:
             backup_path = Path(backup_dir)
             backup_path.mkdir(exist_ok=True)
 
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             # Copy database files
             import shutil
@@ -533,20 +609,20 @@ class DataStorage:
                     file_count += 1
 
             return {
-                'total_size_bytes': total_size,
-                'file_count': file_count,
-                'data_directory': str(self.data_dir),
-                'databases': {
-                    'main': str(self.main_db),
-                    'paper_trading': str(self.paper_trading_db),
-                    'analytics': str(self.analytics_db)
-                }
+                "total_size_bytes": total_size,
+                "file_count": file_count,
+                "data_directory": str(self.data_dir),
+                "databases": {
+                    "main": str(self.main_db),
+                    "paper_trading": str(self.paper_trading_db),
+                    "analytics": str(self.analytics_db),
+                },
             }
 
         except Exception as e:
             logger.error(f"Error getting storage stats: {e}")
             return {
-                'total_size_bytes': 0,
-                'file_count': 0,
-                'data_directory': str(self.data_dir)
+                "total_size_bytes": 0,
+                "file_count": 0,
+                "data_directory": str(self.data_dir),
             }

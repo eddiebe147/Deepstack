@@ -5,34 +5,50 @@ Loads and validates configuration from YAML files and environment variables.
 Provides type-safe configuration access throughout the application.
 """
 
-import os
 import logging
-from typing import Dict, List, Optional, Any
+import os
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field, validator
-
 
 logger = logging.getLogger(__name__)
 
 
 class TradingConfig(BaseModel):
     """Trading mode and risk settings."""
-    mode: str = Field(default="paper", description="Trading mode: 'paper' or 'live'")
-    max_position_size: float = Field(default=0.05, description="Maximum position size as % of portfolio")
-    max_portfolio_heat: float = Field(default=0.15, description="Maximum total portfolio risk")
-    daily_loss_limit: float = Field(default=0.02, description="Daily loss limit as % of portfolio")
-    weekly_loss_limit: float = Field(default=0.05, description="Weekly loss limit as % of portfolio")
-    max_drawdown: float = Field(default=0.15, description="Maximum drawdown as % of portfolio")
 
-    @validator('mode')
+    mode: str = Field(default="paper", description="Trading mode: 'paper' or 'live'")
+    max_position_size: float = Field(
+        default=0.05, description="Maximum position size as % of portfolio"
+    )
+    max_portfolio_heat: float = Field(
+        default=0.15, description="Maximum total portfolio risk"
+    )
+    daily_loss_limit: float = Field(
+        default=0.02, description="Daily loss limit as % of portfolio"
+    )
+    weekly_loss_limit: float = Field(
+        default=0.05, description="Weekly loss limit as % of portfolio"
+    )
+    max_drawdown: float = Field(
+        default=0.15, description="Maximum drawdown as % of portfolio"
+    )
+
+    @validator("mode")
     def validate_mode(cls, v):
-        if v not in ['paper', 'live']:
+        if v not in ["paper", "live"]:
             raise ValueError("mode must be 'paper' or 'live'")
         return v
 
-    @validator('max_position_size', 'max_portfolio_heat', 'daily_loss_limit', 'weekly_loss_limit', 'max_drawdown')
+    @validator(
+        "max_position_size",
+        "max_portfolio_heat",
+        "daily_loss_limit",
+        "weekly_loss_limit",
+        "max_drawdown",
+    )
     def validate_percentages(cls, v):
         if not 0 < v <= 1:
             raise ValueError("Percentage values must be between 0 and 1")
@@ -41,83 +57,111 @@ class TradingConfig(BaseModel):
 
 class RiskLimits(BaseModel):
     """Hard risk limits that cannot be exceeded."""
-    max_position_pct: float = Field(default=0.05, description="Hard limit on position size")
-    max_concentration: float = Field(default=0.25, description="Hard limit on single position concentration")
-    max_portfolio_heat: float = Field(default=0.15, description="Hard limit on total portfolio risk")
+
+    max_position_pct: float = Field(
+        default=0.05, description="Hard limit on position size"
+    )
+    max_concentration: float = Field(
+        default=0.25, description="Hard limit on single position concentration"
+    )
+    max_portfolio_heat: float = Field(
+        default=0.15, description="Hard limit on total portfolio risk"
+    )
     daily_stop: float = Field(default=0.02, description="Daily loss stop")
     weekly_stop: float = Field(default=0.05, description="Weekly loss stop")
     max_drawdown: float = Field(default=0.15, description="Maximum drawdown limit")
 
-    leverage_limits: Dict[str, float] = Field(default_factory=lambda: {
-        'max_leverage': 1.5,
-        'margin_buffer': 0.30
-    })
+    leverage_limits: Dict[str, float] = Field(
+        default_factory=lambda: {"max_leverage": 1.5, "margin_buffer": 0.30}
+    )
 
-    kelly_settings: Dict[str, float] = Field(default_factory=lambda: {
-        'max_kelly_fraction': 0.30,
-        'default_fraction': 0.25,
-        'min_fraction': 0.10
-    })
+    kelly_settings: Dict[str, float] = Field(
+        default_factory=lambda: {
+            "max_kelly_fraction": 0.30,
+            "default_fraction": 0.25,
+            "min_fraction": 0.10,
+        }
+    )
 
-    stop_loss: Dict[str, Any] = Field(default_factory=lambda: {
-        'never_move_down': True,
-        'thesis_break_exit': True,
-        'trailing_stops': True,
-        'max_stop_pct': 0.25
-    })
+    stop_loss: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "never_move_down": True,
+            "thesis_break_exit": True,
+            "trailing_stops": True,
+            "max_stop_pct": 0.25,
+        }
+    )
 
-    emotional_override: Dict[str, Any] = Field(default_factory=lambda: {
-        'cooling_period_minutes': 5,
-        'require_justification': True,
-        'log_all_overrides': True,
-        'pattern_detection': True
-    })
+    emotional_override: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "cooling_period_minutes": 5,
+            "require_justification": True,
+            "log_all_overrides": True,
+            "pattern_detection": True,
+        }
+    )
 
 
 class StrategyConfig(BaseModel):
     """Strategy-specific configuration."""
+
     enabled: bool = Field(default=True)
-    allocation: float = Field(default=0.0, description="Target allocation as % of portfolio")
-    criteria: Dict[str, Any] = Field(default_factory=dict, description="Strategy-specific parameters")
+    allocation: float = Field(
+        default=0.0, description="Target allocation as % of portfolio"
+    )
+    criteria: Dict[str, Any] = Field(
+        default_factory=dict, description="Strategy-specific parameters"
+    )
 
 
 class StrategiesConfig(BaseModel):
     """All strategy configurations."""
-    deep_value: StrategyConfig = Field(default_factory=lambda: StrategyConfig(
-        enabled=True, allocation=0.40,
-        criteria={
-            'p_b_max': 1.0,
-            'p_e_max': 10,
-            'ev_ebitda_max': 7,
-            'fcf_yield_min': 0.07,
-            'debt_equity_max': 1.0,
-            'current_ratio_min': 1.5,
-            'roe_min': 0.15
-        }
-    ))
 
-    squeeze_hunter: StrategyConfig = Field(default_factory=lambda: StrategyConfig(
-        enabled=True, allocation=0.30,
-        criteria={
-            'short_interest_min': 0.20,
-            'days_to_cover_min': 5,
-            'borrow_cost_min': 0.05,
-            'float_available_max': 0.20
-        }
-    ))
+    deep_value: StrategyConfig = Field(
+        default_factory=lambda: StrategyConfig(
+            enabled=True,
+            allocation=0.40,
+            criteria={
+                "p_b_max": 1.0,
+                "p_e_max": 10,
+                "ev_ebitda_max": 7,
+                "fcf_yield_min": 0.07,
+                "debt_equity_max": 1.0,
+                "current_ratio_min": 1.5,
+                "roe_min": 0.15,
+            },
+        )
+    )
 
-    pairs_trading: StrategyConfig = Field(default_factory=lambda: StrategyConfig(
-        enabled=False, allocation=0.20,
-        criteria={
-            'correlation_min': 0.80,
-            'z_score_entry': 2.0,
-            'z_score_stop': 3.5
-        }
-    ))
+    squeeze_hunter: StrategyConfig = Field(
+        default_factory=lambda: StrategyConfig(
+            enabled=True,
+            allocation=0.30,
+            criteria={
+                "short_interest_min": 0.20,
+                "days_to_cover_min": 5,
+                "borrow_cost_min": 0.05,
+                "float_available_max": 0.20,
+            },
+        )
+    )
+
+    pairs_trading: StrategyConfig = Field(
+        default_factory=lambda: StrategyConfig(
+            enabled=False,
+            allocation=0.20,
+            criteria={
+                "correlation_min": 0.80,
+                "z_score_entry": 2.0,
+                "z_score_stop": 3.5,
+            },
+        )
+    )
 
 
 class APIConfig(BaseModel):
     """API server configuration."""
+
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000)
     cors_origins: List[str] = Field(default_factory=lambda: ["*"])
@@ -125,6 +169,7 @@ class APIConfig(BaseModel):
 
 class LoggingConfig(BaseModel):
     """Logging configuration."""
+
     level: str = Field(default="INFO")
     format: str = Field(default="json")
     file: Optional[str] = Field(default="logs/deepstack.log")
@@ -132,6 +177,7 @@ class LoggingConfig(BaseModel):
 
 class Config(BaseModel):
     """Main DeepStack configuration."""
+
     trading: TradingConfig = Field(default_factory=TradingConfig)
     risk_limits: RiskLimits = Field(default_factory=RiskLimits)
     strategies: StrategiesConfig = Field(default_factory=StrategiesConfig)
@@ -147,7 +193,7 @@ class Config(BaseModel):
     anthropic_api_key: Optional[str] = None
 
     @classmethod
-    def from_yaml(cls, config_path: str) -> 'Config':
+    def from_yaml(cls, config_path: str) -> "Config":
         """
         Load configuration from YAML file.
 
@@ -164,7 +210,7 @@ class Config(BaseModel):
             config_dict = {}
         else:
             try:
-                with open(config_path, 'r') as f:
+                with open(config_path, "r") as f:
                     config_dict = yaml.safe_load(f) or {}
             except Exception as e:
                 logger.error(f"Error loading config from {config_path}: {e}")
@@ -173,7 +219,7 @@ class Config(BaseModel):
         return cls._from_dict_with_env(config_dict)
 
     @classmethod
-    def from_env(cls) -> 'Config':
+    def from_env(cls) -> "Config":
         """
         Load configuration from environment variables only.
 
@@ -183,7 +229,7 @@ class Config(BaseModel):
         return cls._from_dict_with_env({})
 
     @classmethod
-    def _from_dict_with_env(cls, config_dict: Dict[str, Any]) -> 'Config':
+    def _from_dict_with_env(cls, config_dict: Dict[str, Any]) -> "Config":
         """
         Create Config object from dict, overlaying environment variables.
 
@@ -195,10 +241,10 @@ class Config(BaseModel):
         """
         # Load environment variables
         env_config = {
-            'ibkr_host': os.getenv('IBKR_HOST', '127.0.0.1'),
-            'ibkr_port': int(os.getenv('IBKR_PORT', '7497')),
-            'ibkr_client_id': int(os.getenv('IBKR_CLIENT_ID', '1')),
-            'anthropic_api_key': os.getenv('ANTHROPIC_API_KEY'),
+            "ibkr_host": os.getenv("IBKR_HOST", "127.0.0.1"),
+            "ibkr_port": int(os.getenv("IBKR_PORT", "7497")),
+            "ibkr_client_id": int(os.getenv("IBKR_CLIENT_ID", "1")),
+            "anthropic_api_key": os.getenv("ANTHROPIC_API_KEY"),
         }
 
         # Merge with config dict
@@ -222,10 +268,12 @@ class Config(BaseModel):
         config_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Convert to dict, excluding environment variables
-        config_dict = self.dict(exclude={'ibkr_host', 'ibkr_port', 'ibkr_client_id', 'anthropic_api_key'})
+        config_dict = self.dict(
+            exclude={"ibkr_host", "ibkr_port", "ibkr_client_id", "anthropic_api_key"}
+        )
 
         try:
-            with open(config_path, 'w') as f:
+            with open(config_path, "w") as f:
                 yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
             logger.info(f"Configuration saved to {config_path}")
         except Exception as e:
@@ -251,10 +299,15 @@ class Config(BaseModel):
         errors = []
 
         # Check that allocations don't exceed 100%
-        total_allocation = sum(strategy.allocation for strategy in self.strategies.__dict__.values()
-                             if hasattr(strategy, 'allocation'))
+        total_allocation = sum(
+            strategy.allocation
+            for strategy in self.strategies.__dict__.values()
+            if hasattr(strategy, "allocation")
+        )
         if total_allocation > 1.0:
-            errors.append(f"Total strategy allocation {total_allocation:.1%} exceeds 100%")
+            errors.append(
+                f"Total strategy allocation {total_allocation:.1%} exceeds 100%"
+            )
 
         # Check risk limits are reasonable
         if self.trading.max_position_size > self.risk_limits.max_position_pct:

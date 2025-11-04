@@ -6,11 +6,10 @@ Coordinates: screen → analyze → risk-check → execute → monitor
 
 import asyncio
 import logging
-from typing import List, Optional, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from .agents.strategy_agent import StrategyAgent
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,14 @@ class TradingOrchestrator:
     Minimal orchestrator to run autonomous cycles in paper mode.
     """
 
-    def __init__(self, config, strategy_agent: Optional[StrategyAgent], risk_manager, order_manager, paper_trader):
+    def __init__(
+        self,
+        config,
+        strategy_agent: Optional[StrategyAgent],
+        risk_manager,
+        order_manager,
+        paper_trader,
+    ):
         self.config = config
         self.strategy_agent = strategy_agent or StrategyAgent()
         self.risk_manager = risk_manager
@@ -37,8 +43,14 @@ class TradingOrchestrator:
         # Defaults if automation config missing
         try:
             automation = getattr(self.config, "automation", None)
-            self._symbols = getattr(automation, "symbols", ["AAPL", "MSFT"]) if automation else ["AAPL", "MSFT"]
-            self._cadence_s = int(getattr(automation, "cadence_s", 30)) if automation else 30
+            self._symbols = (
+                getattr(automation, "symbols", ["AAPL", "MSFT"])
+                if automation
+                else ["AAPL", "MSFT"]
+            )
+            self._cadence_s = (
+                int(getattr(automation, "cadence_s", 30)) if automation else 30
+            )
         except Exception:
             self._symbols = ["AAPL", "MSFT"]
             self._cadence_s = 30
@@ -52,7 +64,9 @@ class TradingOrchestrator:
             "symbols": self._symbols,
         }
 
-    async def start(self, cadence_s: Optional[int] = None, symbols: Optional[List[str]] = None):
+    async def start(
+        self, cadence_s: Optional[int] = None, symbols: Optional[List[str]] = None
+    ):
         if self._running:
             return
         if cadence_s:
@@ -61,7 +75,9 @@ class TradingOrchestrator:
             self._symbols = symbols
         self._running = True
         self._task = asyncio.create_task(self._run_loop())
-        logger.info(f"TradingOrchestrator started (cadence={self._cadence_s}s, symbols={self._symbols})")
+        logger.info(
+            f"TradingOrchestrator started (cadence={self._cadence_s}s, symbols={self._symbols})"
+        )
 
     async def stop(self):
         self._running = False
@@ -107,13 +123,17 @@ class TradingOrchestrator:
                 portfolio_value = self.paper_trader.get_portfolio_value()
                 quantity = max(1, int((portfolio_value * desired_pct) / current_price))
 
-                heat_check = await self.risk_manager.check_portfolio_heat(symbol, quantity, 'BUY', current_price)
-                if not heat_check.get('approved'):
+                heat_check = await self.risk_manager.check_portfolio_heat(
+                    symbol, quantity, "BUY", current_price
+                )
+                if not heat_check.get("approved"):
                     self._last_action = f"risk_reject:{symbol}"
                     continue
 
                 # Execute market buy in paper
-                order_id = await self.order_manager.place_market_order(symbol, quantity, 'BUY')
+                order_id = await self.order_manager.place_market_order(
+                    symbol, quantity, "BUY"
+                )
                 if order_id:
                     self._last_action = f"order_submitted:{symbol}:{order_id}"
                 else:
@@ -121,6 +141,3 @@ class TradingOrchestrator:
 
             except Exception as e:
                 logger.error(f"Cycle error for {symbol}: {e}")
-
-
-

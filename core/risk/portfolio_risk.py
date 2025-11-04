@@ -6,12 +6,10 @@ Implements Kelly Criterion, stop loss management, and portfolio heat tracking.
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
-import asyncio
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
 
 from ..config import Config
-
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +33,17 @@ class RiskMetrics:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API responses."""
         return {
-            'symbol': self.symbol,
-            'portfolio_value': self.portfolio_value,
-            'position_value': self.position_value,
-            'position_pct': self.position_pct,
-            'portfolio_heat': self.portfolio_heat,
-            'kelly_fraction': self.kelly_fraction,
-            'var_95': self.var_95,
-            'max_drawdown': self.max_drawdown,
-            'sharpe_ratio': self.sharpe_ratio,
-            'sortino_ratio': self.sortino_ratio,
-            'calmar_ratio': self.calmar_ratio
+            "symbol": self.symbol,
+            "portfolio_value": self.portfolio_value,
+            "position_value": self.position_value,
+            "position_pct": self.position_pct,
+            "portfolio_heat": self.portfolio_heat,
+            "kelly_fraction": self.kelly_fraction,
+            "var_95": self.var_95,
+            "max_drawdown": self.max_drawdown,
+            "sharpe_ratio": self.sharpe_ratio,
+            "sortino_ratio": self.sortino_ratio,
+            "calmar_ratio": self.calmar_ratio,
         }
 
 
@@ -86,8 +84,9 @@ class PortfolioRisk:
 
         logger.info("PortfolioRisk manager initialized")
 
-    async def check_portfolio_heat(self, symbol: str, quantity: int, action: str,
-                                 price: float) -> Dict[str, Any]:
+    async def check_portfolio_heat(
+        self, symbol: str, quantity: int, action: str, price: float
+    ) -> Dict[str, Any]:
         """
         Check if adding/removing position exceeds portfolio heat limits.
 
@@ -104,21 +103,15 @@ class PortfolioRisk:
             # Get current portfolio value
             portfolio_value = await self._get_portfolio_value()
             if portfolio_value <= 0:
-                return {
-                    'approved': False,
-                    'reason': 'Cannot determine portfolio value'
-                }
+                return {"approved": False, "reason": "Cannot determine portfolio value"}
 
             # Calculate position value change
             position_value = quantity * price
             position_pct = position_value / portfolio_value
 
             # For sells, we're reducing heat
-            if action == 'SELL':
-                return {
-                    'approved': True,
-                    'reason': 'Sell order reduces portfolio heat'
-                }
+            if action == "SELL":
+                return {"approved": True, "reason": "Sell order reduces portfolio heat"}
 
             # For buys, check if this exceeds limits
             current_heat = await self._calculate_current_heat()
@@ -126,32 +119,37 @@ class PortfolioRisk:
 
             if new_heat > self.max_portfolio_heat:
                 return {
-                    'approved': False,
-                    'reason': f'Portfolio heat {new_heat:.1%} would exceed limit {self.max_portfolio_heat:.1%}'
+                    "approved": False,
+                    "reason": f"Portfolio heat {new_heat:.1%} would exceed limit {self.max_portfolio_heat:.1%}",
                 }
 
             # Check individual position limit
             if position_pct > self.max_position_pct:
                 return {
-                    'approved': False,
-                    'reason': f'Position size {position_pct:.1%} exceeds limit {self.max_position_pct:.1%}'
+                    "approved": False,
+                    "reason": f"Position size {position_pct:.1%} exceeds limit {self.max_position_pct:.1%}",
                 }
 
             return {
-                'approved': True,
-                'reason': f'Portfolio heat check passed (current: {current_heat:.1%}, new: {new_heat:.1%})'
+                "approved": True,
+                "reason": f"Portfolio heat check passed (current: {current_heat:.1%}, new: {new_heat:.1%})",
             }
 
         except Exception as e:
             logger.error(f"Error checking portfolio heat: {e}")
             return {
-                'approved': False,
-                'reason': f'Error checking portfolio heat: {str(e)}'
+                "approved": False,
+                "reason": f"Error checking portfolio heat: {str(e)}",
             }
 
-    async def calculate_kelly_position_size(self, symbol: str, entry_price: float,
-                                          stop_price: float, win_rate: float = 0.5,
-                                          avg_win: float = 2.0) -> Dict[str, Any]:
+    async def calculate_kelly_position_size(
+        self,
+        symbol: str,
+        entry_price: float,
+        stop_price: float,
+        win_rate: float = 0.5,
+        avg_win: float = 2.0,
+    ) -> Dict[str, Any]:
         """
         Calculate optimal position size using Kelly Criterion.
 
@@ -169,9 +167,9 @@ class PortfolioRisk:
             portfolio_value = await self._get_portfolio_value()
             if portfolio_value <= 0:
                 return {
-                    'position_size': 0,
-                    'position_pct': 0.0,
-                    'reason': 'Cannot determine portfolio value'
+                    "position_size": 0,
+                    "position_pct": 0.0,
+                    "reason": "Cannot determine portfolio value",
                 }
 
             # Calculate risk per share
@@ -179,9 +177,9 @@ class PortfolioRisk:
 
             if risk_per_share <= 0:
                 return {
-                    'position_size': 0,
-                    'position_pct': 0.0,
-                    'reason': 'Invalid stop loss price'
+                    "position_size": 0,
+                    "position_pct": 0.0,
+                    "reason": "Invalid stop loss price",
                 }
 
             # Kelly formula: f = (bp - q) / b
@@ -198,7 +196,7 @@ class PortfolioRisk:
             kelly_f = (b * p - q) / b
 
             # Apply conservative multiplier
-            max_kelly_fraction = self.kelly_settings['max_kelly_fraction']
+            max_kelly_fraction = self.kelly_settings["max_kelly_fraction"]
             kelly_f = min(kelly_f, max_kelly_fraction)
 
             # Ensure positive Kelly
@@ -219,24 +217,25 @@ class PortfolioRisk:
             position_pct = position_value / portfolio_value
 
             return {
-                'position_size': position_size,
-                'position_pct': position_pct,
-                'position_value': position_value,
-                'kelly_fraction': kelly_f,
-                'risk_amount': risk_amount,
-                'reason': f'Kelly sizing: {kelly_f:.1%} of portfolio, {position_pct:.1%} position'
+                "position_size": position_size,
+                "position_pct": position_pct,
+                "position_value": position_value,
+                "kelly_fraction": kelly_f,
+                "risk_amount": risk_amount,
+                "reason": f"Kelly sizing: {kelly_f:.1%} of portfolio, {position_pct:.1%} position",
             }
 
         except Exception as e:
             logger.error(f"Error calculating Kelly position size: {e}")
             return {
-                'position_size': 0,
-                'position_pct': 0.0,
-                'reason': f'Error calculating Kelly size: {str(e)}'
+                "position_size": 0,
+                "position_pct": 0.0,
+                "reason": f"Error calculating Kelly size: {str(e)}",
             }
 
-    async def validate_stop_loss(self, symbol: str, entry_price: float,
-                               stop_price: float, action: str) -> Dict[str, Any]:
+    async def validate_stop_loss(
+        self, symbol: str, entry_price: float, stop_price: float, action: str
+    ) -> Dict[str, Any]:
         """
         Validate stop loss placement.
 
@@ -254,58 +253,59 @@ class PortfolioRisk:
             stop_distance_pct = abs(stop_price - entry_price) / entry_price
 
             # For buys, stop should be below entry
-            if action == 'BUY':
+            if action == "BUY":
                 if stop_price >= entry_price:
                     return {
-                        'valid': False,
-                        'reason': 'Stop loss must be below entry price for buy orders'
+                        "valid": False,
+                        "reason": "Stop loss must be below entry price for buy orders",
                     }
 
                 # Check if stop is too tight or too wide
-                max_stop_pct = self.config.risk_limits.stop_loss.get('max_stop_pct', 0.25)
+                max_stop_pct = self.config.risk_limits.stop_loss.get(
+                    "max_stop_pct", 0.25
+                )
 
                 if stop_distance_pct > max_stop_pct:
                     return {
-                        'valid': False,
-                        'reason': f'Stop loss {stop_distance_pct:.1%} exceeds maximum {max_stop_pct:.1%}'
+                        "valid": False,
+                        "reason": f"Stop loss {stop_distance_pct:.1%} exceeds maximum {max_stop_pct:.1%}",
                     }
 
             # For sells, stop should be above entry
-            elif action == 'SELL':
+            elif action == "SELL":
                 if stop_price <= entry_price:
                     return {
-                        'valid': False,
-                        'reason': 'Stop loss must be above entry price for sell orders'
+                        "valid": False,
+                        "reason": "Stop loss must be above entry price for sell orders",
                     }
 
                 # Check if stop is too tight or too wide
-                max_stop_pct = self.config.risk_limits.stop_loss.get('max_stop_pct', 0.25)
+                max_stop_pct = self.config.risk_limits.stop_loss.get(
+                    "max_stop_pct", 0.25
+                )
 
                 if stop_distance_pct > max_stop_pct:
                     return {
-                        'valid': False,
-                        'reason': f'Stop loss {stop_distance_pct:.1%} exceeds maximum {max_stop_pct:.1%}'
+                        "valid": False,
+                        "reason": f"Stop loss {stop_distance_pct:.1%} exceeds maximum {max_stop_pct:.1%}",
                     }
 
             # Check minimum stop distance (avoid market noise)
             min_stop_pct = 0.01  # 1% minimum
             if stop_distance_pct < min_stop_pct:
                 return {
-                    'valid': False,
-                    'reason': f'Stop loss {stop_distance_pct:.1%} below minimum {min_stop_pct:.1%}'
+                    "valid": False,
+                    "reason": f"Stop loss {stop_distance_pct:.1%} below minimum {min_stop_pct:.1%}",
                 }
 
             return {
-                'valid': True,
-                'reason': f'Stop loss {stop_distance_pct:.1%} within acceptable range'
+                "valid": True,
+                "reason": f"Stop loss {stop_distance_pct:.1%} within acceptable range",
             }
 
         except Exception as e:
             logger.error(f"Error validating stop loss: {e}")
-            return {
-                'valid': False,
-                'reason': f'Error validating stop loss: {str(e)}'
-            }
+            return {"valid": False, "reason": f"Error validating stop loss: {str(e)}"}
 
     async def calculate_portfolio_metrics(self) -> RiskMetrics:
         """
@@ -358,8 +358,8 @@ class PortfolioRisk:
 
             if portfolio_value <= 0:
                 return {
-                    'within_limit': True,
-                    'reason': 'Cannot determine portfolio value'
+                    "within_limit": True,
+                    "reason": "Cannot determine portfolio value",
                 }
 
             # Calculate loss percentage
@@ -367,33 +367,33 @@ class PortfolioRisk:
 
             if day_pnl >= 0:  # Profit or no loss
                 return {
-                    'within_limit': True,
-                    'current_loss_pct': 0.0,
-                    'limit_pct': self.daily_stop,
-                    'reason': f'Current P&L: ${day_pnl:+.2f} (profit)'
+                    "within_limit": True,
+                    "current_loss_pct": 0.0,
+                    "limit_pct": self.daily_stop,
+                    "reason": f"Current P&L: ${day_pnl:+.2f} (profit)",
                 }
 
             # Check if loss exceeds limit
             if loss_pct > self.daily_stop:
                 return {
-                    'within_limit': False,
-                    'current_loss_pct': loss_pct,
-                    'limit_pct': self.daily_stop,
-                    'reason': f'Daily loss {loss_pct:.1%} exceeds limit {self.daily_stop:.1%}'
+                    "within_limit": False,
+                    "current_loss_pct": loss_pct,
+                    "limit_pct": self.daily_stop,
+                    "reason": f"Daily loss {loss_pct:.1%} exceeds limit {self.daily_stop:.1%}",
                 }
 
             return {
-                'within_limit': True,
-                'current_loss_pct': loss_pct,
-                'limit_pct': self.daily_stop,
-                'reason': f'Daily loss {loss_pct:.1%} within limit {self.daily_stop:.1%}'
+                "within_limit": True,
+                "current_loss_pct": loss_pct,
+                "limit_pct": self.daily_stop,
+                "reason": f"Daily loss {loss_pct:.1%} within limit {self.daily_stop:.1%}",
             }
 
         except Exception as e:
             logger.error(f"Error checking daily loss limit: {e}")
             return {
-                'within_limit': True,
-                'reason': f'Error checking daily loss limit: {str(e)}'
+                "within_limit": True,
+                "reason": f"Error checking daily loss limit: {str(e)}",
             }
 
     async def check_weekly_loss_limit(self) -> Dict[str, Any]:
@@ -410,8 +410,8 @@ class PortfolioRisk:
 
             if portfolio_value <= 0:
                 return {
-                    'within_limit': True,
-                    'reason': 'Cannot determine portfolio value'
+                    "within_limit": True,
+                    "reason": "Cannot determine portfolio value",
                 }
 
             # Calculate loss percentage
@@ -419,33 +419,33 @@ class PortfolioRisk:
 
             if week_pnl >= 0:  # Profit or no loss
                 return {
-                    'within_limit': True,
-                    'current_loss_pct': 0.0,
-                    'limit_pct': self.weekly_stop,
-                    'reason': f'Current P&L: ${week_pnl:+.2f} (profit)'
+                    "within_limit": True,
+                    "current_loss_pct": 0.0,
+                    "limit_pct": self.weekly_stop,
+                    "reason": f"Current P&L: ${week_pnl:+.2f} (profit)",
                 }
 
             # Check if loss exceeds limit
             if loss_pct > self.weekly_stop:
                 return {
-                    'within_limit': False,
-                    'current_loss_pct': loss_pct,
-                    'limit_pct': self.weekly_stop,
-                    'reason': f'Weekly loss {loss_pct:.1%} exceeds limit {self.weekly_stop:.1%}'
+                    "within_limit": False,
+                    "current_loss_pct": loss_pct,
+                    "limit_pct": self.weekly_stop,
+                    "reason": f"Weekly loss {loss_pct:.1%} exceeds limit {self.weekly_stop:.1%}",
                 }
 
             return {
-                'within_limit': True,
-                'current_loss_pct': loss_pct,
-                'limit_pct': self.weekly_stop,
-                'reason': f'Weekly loss {loss_pct:.1%} within limit {self.weekly_stop:.1%}'
+                "within_limit": True,
+                "current_loss_pct": loss_pct,
+                "limit_pct": self.weekly_stop,
+                "reason": f"Weekly loss {loss_pct:.1%} within limit {self.weekly_stop:.1%}",
             }
 
         except Exception as e:
             logger.error(f"Error checking weekly loss limit: {e}")
             return {
-                'within_limit': True,
-                'reason': f'Error checking weekly loss limit: {str(e)}'
+                "within_limit": True,
+                "reason": f"Error checking weekly loss limit: {str(e)}",
             }
 
     # Helper Methods

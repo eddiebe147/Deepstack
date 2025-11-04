@@ -6,23 +6,23 @@ context management, and prompt templating. All trading agents inherit from this.
 """
 
 import asyncio
-import logging
 import json
-from typing import Dict, List, Optional, Any, Callable
+import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 from anthropic import Anthropic
 from pydantic import BaseModel
 
 from ..config import get_config
 
-
 logger = logging.getLogger(__name__)
 
 
 class Tool(BaseModel):
     """Represents a tool that agents can call."""
+
     name: str
     description: str
     input_schema: Dict[str, Any]
@@ -33,12 +33,14 @@ class Tool(BaseModel):
 
 class ToolCall(BaseModel):
     """Represents a tool call made by the agent."""
+
     tool_name: str
     arguments: Dict[str, Any]
 
 
 class AgentResponse(BaseModel):
     """Response from an agent."""
+
     content: str
     tool_calls: List[ToolCall] = []
     metadata: Dict[str, Any] = {}
@@ -109,14 +111,17 @@ class BaseAgent:
             {
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": tool.input_schema
+                "input_schema": tool.input_schema,
             }
             for tool in self.tools.values()
         ]
 
-    async def call_claude(self, messages: List[Dict[str, str]],
-                         tools: Optional[List[Dict[str, Any]]] = None,
-                         max_tokens: int = 1024) -> Dict[str, Any]:
+    async def call_claude(
+        self,
+        messages: List[Dict[str, str]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        max_tokens: int = 1024,
+    ) -> Dict[str, Any]:
         """
         Call Claude API with messages and optional tools.
 
@@ -216,11 +221,12 @@ Always explain your reasoning step by step.
                 return "Using default trading principles."
 
             import yaml
-            with open(philosophy_file, 'r') as f:
+
+            with open(philosophy_file, "r") as f:
                 data = yaml.safe_load(f)
 
             philosophies = []
-            for trader, info in data.get('traders', {}).items():
+            for trader, info in data.get("traders", {}).items():
                 philosophies.append(
                     f"**{info['name']}**: {info['philosophy']}\n"
                     f"Key principles: {'; '.join(info['key_principles'][:3])}"
@@ -240,15 +246,13 @@ Always explain your reasoning step by step.
             role: Message role ('user' or 'assistant')
             content: Message content
         """
-        self.context.append({
-            "role": role,
-            "content": content,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.context.append(
+            {"role": role, "content": content, "timestamp": datetime.now().isoformat()}
+        )
 
         # Keep context manageable
         if len(self.context) > self.max_context_length:
-            self.context = self.context[-self.max_context_length:]
+            self.context = self.context[-self.max_context_length :]
 
     def get_recent_context(self, limit: int = 5) -> List[Dict[str, str]]:
         """
@@ -309,23 +313,15 @@ Always explain your reasoning step by step.
         # Build messages for Claude
         messages = []
         for msg in context_messages:
-            messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
+            messages.append({"role": msg["role"], "content": msg["content"]})
 
         # Add current user message
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
+        messages.append({"role": "user", "content": user_message})
 
         try:
             # Call Claude with tools
             response = await self.call_claude(
-                messages,
-                tools=self.get_tools_for_claude(),
-                max_tokens=2048
+                messages, tools=self.get_tools_for_claude(), max_tokens=2048
             )
 
             # Parse response
@@ -333,12 +329,14 @@ Always explain your reasoning step by step.
 
             # Check for tool calls
             tool_calls = []
-            if hasattr(response, 'tool_calls') and response.tool_calls:
+            if hasattr(response, "tool_calls") and response.tool_calls:
                 for tool_call in response.tool_calls:
-                    tool_calls.append(ToolCall(
-                        tool_name=tool_call.function.name,
-                        arguments=json.loads(tool_call.function.arguments)
-                    ))
+                    tool_calls.append(
+                        ToolCall(
+                            tool_name=tool_call.function.name,
+                            arguments=json.loads(tool_call.function.arguments),
+                        )
+                    )
 
             # Add assistant response to context
             self.add_context("assistant", assistant_content)
@@ -349,15 +347,17 @@ Always explain your reasoning step by step.
                 metadata={
                     "model": self.model,
                     "timestamp": datetime.now().isoformat(),
-                    "tokens_used": response.usage.input_tokens if hasattr(response, 'usage') else 0
-                }
+                    "tokens_used": (
+                        response.usage.input_tokens if hasattr(response, "usage") else 0
+                    ),
+                },
             )
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
             return AgentResponse(
                 content=f"I apologize, but I encountered an error processing your request: {str(e)}",
-                metadata={"error": str(e)}
+                metadata={"error": str(e)},
             )
 
     async def run_with_tools(self, user_message: str) -> AgentResponse:
@@ -379,7 +379,9 @@ Always explain your reasoning step by step.
                     tool_result = await self.execute_tool_call(tool_call)
 
                     # Add tool result to context
-                    tool_message = f"Tool {tool_call.tool_name} result: {json.dumps(tool_result)}"
+                    tool_message = (
+                        f"Tool {tool_call.tool_name} result: {json.dumps(tool_result)}"
+                    )
                     self.add_context("system", tool_message)
 
                 except Exception as e:
@@ -390,16 +392,11 @@ Always explain your reasoning step by step.
             context_messages = self.get_recent_context()
             messages = []
             for msg in context_messages:
-                messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
+                messages.append({"role": msg["role"], "content": msg["content"]})
 
             try:
                 response = await self.call_claude(
-                    messages,
-                    tools=self.get_tools_for_claude(),
-                    max_tokens=2048
+                    messages, tools=self.get_tools_for_claude(), max_tokens=2048
                 )
 
                 assistant_content = response.content[0].text if response.content else ""
@@ -410,20 +407,21 @@ Always explain your reasoning step by step.
                     tool_calls=[
                         ToolCall(
                             tool_name=tc.function.name,
-                            arguments=json.loads(tc.function.arguments)
-                        ) for tc in (response.tool_calls or [])
+                            arguments=json.loads(tc.function.arguments),
+                        )
+                        for tc in (response.tool_calls or [])
                     ],
                     metadata={
                         "model": self.model,
-                        "timestamp": datetime.now().isoformat()
-                    }
+                        "timestamp": datetime.now().isoformat(),
+                    },
                 )
 
             except Exception as e:
                 logger.error(f"Error in tool response processing: {e}")
                 current_response = AgentResponse(
                     content="I apologize, but I encountered an error processing the tool results.",
-                    metadata={"error": str(e)}
+                    metadata={"error": str(e)},
                 )
                 break
 
@@ -438,7 +436,7 @@ Always explain your reasoning step by step.
 
         lines = ["**Current Positions:**"]
         for pos in positions:
-            pnl_color = "🟢" if pos.get('unrealized_pnl', 0) >= 0 else "🔴"
+            pnl_color = "🟢" if pos.get("unrealized_pnl", 0) >= 0 else "🔴"
             lines.append(
                 f"{pnl_color} {pos['symbol']}: {pos['position']} shares @ ${pos['avg_cost']:.2f} "
                 f"(P&L: ${pos.get('unrealized_pnl', 0):+.2f})"
@@ -461,14 +459,15 @@ Always explain your reasoning step by step.
         """Format market data for display."""
         lines = ["**Market Data:**"]
         for symbol, quote in quotes.items():
-            price = quote.get('last', 'N/A')
-            change = quote.get('change', 'N/A')
+            price = quote.get("last", "N/A")
+            change = quote.get("change", "N/A")
             lines.append(f"{symbol}: ${price} ({change})")
 
         return "\n".join(lines)
 
-    def calculate_position_size(self, entry_price: float, stop_price: float,
-                              risk_pct: float = 0.02) -> int:
+    def calculate_position_size(
+        self, entry_price: float, stop_price: float, risk_pct: float = 0.02
+    ) -> int:
         """
         Calculate position size based on risk management.
 

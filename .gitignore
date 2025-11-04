@@ -112,3 +112,4 @@ temp/
 !.claude/skills/
 !.claude/agents/
 !.claude/hooks/
+coverage.json

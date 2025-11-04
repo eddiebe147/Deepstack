@@ -5,14 +5,13 @@ Provides WebSocket-based real-time price updates and price alerting.
 """
 
 import asyncio
-import logging
 import json
-from typing import Dict, List, Optional, Any, Callable
+import logging
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable, Dict, List, Optional
 
 import websockets
-from dataclasses import dataclass
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PriceUpdate:
     """Real-time price update."""
+
     symbol: str
     price: float
     timestamp: datetime
@@ -87,7 +87,9 @@ class PriceFeed:
                 try:
                     callback(update)
                 except Exception as e:
-                    logger.error(f"Error in price update callback for {update.symbol}: {e}")
+                    logger.error(
+                        f"Error in price update callback for {update.symbol}: {e}"
+                    )
 
     async def start_feed(self, symbols: List[str]):
         """
@@ -139,7 +141,7 @@ class PriceFeed:
                         symbol=symbol,
                         price=new_price,
                         timestamp=datetime.now(),
-                        volume=random.randint(1000, 10000)
+                        volume=random.randint(1000, 10000),
                     )
 
                     self.publish_update(update)
@@ -161,45 +163,52 @@ class PriceFeed:
         self.websocket_connections.append(websocket)
 
         try:
-            await websocket.send(json.dumps({
-                'type': 'connected',
-                'message': 'Connected to DeepStack price feed'
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "connected",
+                        "message": "Connected to DeepStack price feed",
+                    }
+                )
+            )
 
             async for message in websocket:
                 try:
                     data = json.loads(message)
 
-                    if data.get('type') == 'subscribe':
-                        symbols = data.get('symbols', [])
+                    if data.get("type") == "subscribe":
+                        symbols = data.get("symbols", [])
                         for symbol in symbols:
-                            self.subscribe(symbol, lambda update, ws=websocket: self._send_websocket_update(ws, update))
+                            self.subscribe(
+                                symbol,
+                                lambda update, ws=websocket: self._send_websocket_update(
+                                    ws, update
+                                ),
+                            )
 
-                        await websocket.send(json.dumps({
-                            'type': 'subscribed',
-                            'symbols': symbols
-                        }))
+                        await websocket.send(
+                            json.dumps({"type": "subscribed", "symbols": symbols})
+                        )
 
-                    elif data.get('type') == 'unsubscribe':
-                        symbols = data.get('symbols', [])
+                    elif data.get("type") == "unsubscribe":
+                        symbols = data.get("symbols", [])
                         for symbol in symbols:
                             # Remove WebSocket from symbol subscribers
                             if symbol in self.subscribers:
                                 self.subscribers[symbol] = [
-                                    cb for cb in self.subscribers[symbol]
-                                    if getattr(cb, '_websocket', None) != websocket
+                                    cb
+                                    for cb in self.subscribers[symbol]
+                                    if getattr(cb, "_websocket", None) != websocket
                                 ]
 
-                        await websocket.send(json.dumps({
-                            'type': 'unsubscribed',
-                            'symbols': symbols
-                        }))
+                        await websocket.send(
+                            json.dumps({"type": "unsubscribed", "symbols": symbols})
+                        )
 
                 except json.JSONDecodeError:
-                    await websocket.send(json.dumps({
-                        'type': 'error',
-                        'message': 'Invalid JSON message'
-                    }))
+                    await websocket.send(
+                        json.dumps({"type": "error", "message": "Invalid JSON message"})
+                    )
 
         except websockets.exceptions.ConnectionClosed:
             pass
@@ -207,17 +216,19 @@ class PriceFeed:
             if websocket in self.websocket_connections:
                 self.websocket_connections.remove(websocket)
 
-    def _send_websocket_update(self, websocket: websockets.WebSocketServerProtocol, update: PriceUpdate):
+    def _send_websocket_update(
+        self, websocket: websockets.WebSocketServerProtocol, update: PriceUpdate
+    ):
         """Send price update to WebSocket client."""
         try:
             message = {
-                'type': 'price_update',
-                'symbol': update.symbol,
-                'price': update.price,
-                'timestamp': update.timestamp.isoformat(),
-                'volume': update.volume,
-                'bid': update.bid,
-                'ask': update.ask
+                "type": "price_update",
+                "symbol": update.symbol,
+                "price": update.price,
+                "timestamp": update.timestamp.isoformat(),
+                "volume": update.volume,
+                "bid": update.bid,
+                "ask": update.ask,
             }
 
             asyncio.create_task(websocket.send(json.dumps(message)))
