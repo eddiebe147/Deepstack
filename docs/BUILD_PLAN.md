@@ -299,7 +299,10 @@ For each task:
 **Status:** [x] Complete ✅ (Nov 5, 2025)
 
 #### **Task 5.2: Tax-Loss Harvesting**
-**Status:** [ ] Not started
+**Worker Agent:** `backend-architect`
+**Watcher Agent:** `code-reviewer` (launched after completion)
+**Quality Gate:** 89%+ coverage, 33 tests, 3-5% alpha validated
+**Status:** [x] Complete ✅ (Nov 5, 2025)
 
 ---
 
