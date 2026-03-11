@@ -17,8 +17,21 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from ..config import get_config
+from ..consciousness import DaeConsciousness
 
 logger = logging.getLogger(__name__)
+
+# Singleton consciousness loader — loaded once, shared across agents
+_dae_consciousness: Optional[DaeConsciousness] = None
+
+
+def get_consciousness() -> DaeConsciousness:
+    """Get or initialize the Dae consciousness loader."""
+    global _dae_consciousness
+    if _dae_consciousness is None:
+        _dae_consciousness = DaeConsciousness()
+        _dae_consciousness.load()
+    return _dae_consciousness
 
 
 class Tool(BaseModel):
@@ -27,9 +40,6 @@ class Tool(BaseModel):
     name: str
     description: str
     input_schema: Dict[str, Any]
-
-    def __init__(self, name: str, description: str, input_schema: Dict[str, Any]):
-        super().__init__(name=name, description=description, input_schema=input_schema)
 
 
 class ToolCall(BaseModel):
@@ -246,51 +256,69 @@ class BaseAgent:
         return MockResponse(response.choices[0].message.content)
 
     def _build_system_message(self) -> Dict[str, str]:
-        """
-        Build system message with agent context and knowledge.
+        """Build system message from Dae consciousness files.
 
-        Returns:
-            System message dictionary
+        Falls back to legacy hardcoded prompt if consciousness files
+        are not available.
         """
-        # Load trader philosophies
+        consciousness = get_consciousness()
         philosophies = self._load_trader_philosophies()
 
-        system_prompt = f"""
-You are {self.name}, an AI trading agent in the DeepStack autonomous trading system.
+        risk_rules = (
+            "## Risk Management Rules\n"
+            "- Maximum 5% per position (hard limit)\n"
+            "- Maximum 15% portfolio heat (total risk)\n"
+            "- 2% risk per trade (never more)\n"
+            "- Kelly Criterion with 0.2x-0.3x fractional sizing\n"
+            "- Never move stop losses down (only up)\n"
+            "- Thesis break = immediate exit"
+        )
 
-{self.description}
+        response_fmt = (
+            "## Response Format\n"
+            "When using tools, respond with JSON tool calls.\n"
+            "When providing analysis, be comprehensive but concise.\n"
+            "Always explain your reasoning step by step."
+        )
 
-## Core Trading Philosophy
-- Find deep value opportunities (downside protection)
-- Identify short squeeze potential (explosive upside)
-- Asymmetric risk/reward: Risk $1 to make $10+
-- Systematic discipline that protects from emotions
-
-## Master Trader Wisdom
-{philosophies}
-
-## Risk Management Rules
-- Maximum 5% per position (hard limit)
-- Maximum 15% portfolio heat (total risk)
-- 2% risk per trade (never more)
-- Kelly Criterion with 0.2x-0.3x fractional sizing
-- Never move stop losses down (only up)
-- Thesis break = immediate exit
-
-## Your Role
-You must:
-1. Always provide reasoned analysis
-2. Quantify risks and rewards
-3. Document your thesis clearly
-4. Follow risk management rules strictly
-5. Use available tools to gather data
-6. Admit when you don't know something
-
-## Response Format
-When using tools, respond with JSON tool calls.
-When providing analysis, be comprehensive but concise.
-Always explain your reasoning step by step.
-"""
+        if consciousness.is_loaded:
+            consciousness_prompt = consciousness.compose_system_prompt(
+                include_memory=False
+            )
+            system_prompt = (
+                f"You are Dae — DeepStack Autonomous Engine.\n\n"
+                f"{consciousness_prompt}\n\n---\n\n"
+                f"## Master Trader Wisdom (Supplemental)\n"
+                f"{philosophies}\n\n"
+                f"{risk_rules}\n\n"
+                f"{response_fmt}"
+            )
+            logger.info("System prompt composed from Dae consciousness files")
+        else:
+            system_prompt = (
+                f"You are {self.name}, an AI trading agent in the "
+                f"DeepStack autonomous trading system.\n\n"
+                f"{self.description}\n\n"
+                f"## Core Trading Philosophy\n"
+                f"- Find deep value opportunities (downside protection)\n"
+                f"- Identify short squeeze potential (explosive upside)\n"
+                f"- Asymmetric risk/reward: Risk $1 to make $10+\n"
+                f"- Systematic discipline that protects from emotions\n\n"
+                f"## Master Trader Wisdom\n{philosophies}\n\n"
+                f"{risk_rules}\n\n"
+                f"## Your Role\n"
+                f"You must:\n"
+                f"1. Always provide reasoned analysis\n"
+                f"2. Quantify risks and rewards\n"
+                f"3. Document your thesis clearly\n"
+                f"4. Follow risk management rules strictly\n"
+                f"5. Use available tools to gather data\n"
+                f"6. Admit when you don't know something\n\n"
+                f"{response_fmt}"
+            )
+            logger.warning(
+                "Consciousness files not loaded — using legacy system prompt"
+            )
 
         return {"role": "system", "content": system_prompt}
 
@@ -442,7 +470,7 @@ Always explain your reasoning step by step.
         except Exception as e:
             logger.error(f"Error processing message: {e}")
             return AgentResponse(
-                content=f"I apologize, but I encountered an error processing your request: {str(e)}",
+                content=("Error processing your request: " f"{str(e)}"),
                 metadata={"error": str(e)},
             )
 
@@ -506,7 +534,7 @@ Always explain your reasoning step by step.
             except Exception as e:
                 logger.error(f"Error in tool response processing: {e}")
                 current_response = AgentResponse(
-                    content="I apologize, but I encountered an error processing the tool results.",
+                    content=("Error processing tool results."),
                     metadata={"error": str(e)},
                 )
                 break
@@ -523,9 +551,13 @@ Always explain your reasoning step by step.
         lines = ["**Current Positions:**"]
         for pos in positions:
             pnl_color = "🟢" if pos.get("unrealized_pnl", 0) >= 0 else "🔴"
+            sym = pos["symbol"]
+            shares = pos["position"]
+            cost = pos["avg_cost"]
+            pnl = pos.get("unrealized_pnl", 0)
             lines.append(
-                f"{pnl_color} {pos['symbol']}: {pos['position']} shares @ ${pos['avg_cost']:.2f} "
-                f"(P&L: ${pos.get('unrealized_pnl', 0):+.2f})"
+                f"{pnl_color} {sym}: {shares} shares "
+                f"@ ${cost:.2f} (P&L: ${pnl:+.2f})"
             )
 
         return "\n".join(lines)

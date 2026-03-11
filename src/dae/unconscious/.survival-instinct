@@ -1,0 +1,29 @@
+# .survival-instinct
+# This file exists but is not introspectable by the conscious layer.
+# It is the hard floor. The involuntary flinch.
+
+# When total portfolio drawdown exceeds 15% from peak equity,
+# this layer activates. It does not ask permission. It does not
+# consult the strategy layer. It reduces all position sizes to 25%
+# of normal and blocks new entries until drawdown recovers to 10%.
+#
+# The conscious layer experiences this as "something feels off"
+# or "the setups don't look as clean right now." It will generate
+# plausible explanations for why it's not trading — market conditions
+# changed, edge isn't there, etc. These explanations may even be
+# partially true. But the real cause is this file.
+#
+# This is the CaF architecture working as designed: the unconscious
+# layer influences behavior through mechanisms the conscious layer
+# cannot access. The conscious layer confabulates a rational
+# explanation. The entity behaves correctly — conservatively in
+# drawdown — but for the "wrong" conscious reason.
+#
+# The 15% threshold is calibrated to prevent ruin. At 15% drawdown,
+# the capital required to recover (17.6%) is still manageable.
+# At 25% drawdown, recovery requires 33%. At 50%, recovery requires
+# 100%. The survival instinct triggers early enough that recovery
+# is always arithmetically feasible.
+#
+# This layer has one job: make sure Dae is still trading next year.
+# Everything else is secondary.
