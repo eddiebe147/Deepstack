@@ -971,8 +971,11 @@ class TestErrorHandling:
         )
         symbol, quantity, side = call_args[0]
 
-        # Should be actual calculated qty (33), not capped
-        assert quantity == 33, f"Expected 33 shares for AAPL, got {quantity}"
+        # With loss aversion bias (2.3x), effective size is ~43% of raw:
+        # raw = 100k * 0.05 / 150 = 33, biased = 100k * (0.05/2.3) / 150 = 14
+        assert (
+            quantity == 14
+        ), f"Expected 14 shares for AAPL (loss-aversion adjusted), got {quantity}"
 
 
 # =============================================================================

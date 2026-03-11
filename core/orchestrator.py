@@ -53,9 +53,13 @@ class TradingOrchestrator:
         self._base_backoff = 5
 
         # Pull automation config with safe defaults
-        automation = getattr(self.config, "automation", None)
-        self._symbols: List[str] = getattr(automation, "symbols", ["AAPL", "MSFT"])
-        self._cadence_s: int = int(getattr(automation, "cadence_s", 30))
+        try:
+            automation = getattr(self.config, "automation", None)
+            self._symbols: List[str] = getattr(automation, "symbols", ["AAPL", "MSFT"])
+            self._cadence_s: int = int(getattr(automation, "cadence_s", 30))
+        except Exception:
+            self._symbols = ["AAPL", "MSFT"]
+            self._cadence_s = 30
 
     def status(self) -> Dict[str, Any]:
         return {
