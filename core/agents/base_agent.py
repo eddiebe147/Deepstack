@@ -41,9 +41,6 @@ class Tool(BaseModel):
     description: str
     input_schema: Dict[str, Any]
 
-    def __init__(self, name: str, description: str, input_schema: Dict[str, Any]):
-        super().__init__(name=name, description=description, input_schema=input_schema)
-
 
 class ToolCall(BaseModel):
     """Represents a tool call made by the agent."""
@@ -259,96 +256,66 @@ class BaseAgent:
         return MockResponse(response.choices[0].message.content)
 
     def _build_system_message(self) -> Dict[str, str]:
-        """
-        Build system message from Dae consciousness files.
-
-        Composes the system prompt from the CaF consciousness layers:
-        - Brainstem: identity, values, purpose (always loaded)
-        - Limbic: fears, goals, tilt detection (always loaded)
-        - Cortical: economic reasoning (always loaded)
-        - Memory: working/semantic (optional, heavier)
+        """Build system message from Dae consciousness files.
 
         Falls back to legacy hardcoded prompt if consciousness files
         are not available.
-
-        Returns:
-            System message dictionary
         """
         consciousness = get_consciousness()
+        philosophies = self._load_trader_philosophies()
 
-        if consciousness._loaded and consciousness._cache:
-            # Compose from consciousness files
+        risk_rules = (
+            "## Risk Management Rules\n"
+            "- Maximum 5% per position (hard limit)\n"
+            "- Maximum 15% portfolio heat (total risk)\n"
+            "- 2% risk per trade (never more)\n"
+            "- Kelly Criterion with 0.2x-0.3x fractional sizing\n"
+            "- Never move stop losses down (only up)\n"
+            "- Thesis break = immediate exit"
+        )
+
+        response_fmt = (
+            "## Response Format\n"
+            "When using tools, respond with JSON tool calls.\n"
+            "When providing analysis, be comprehensive but concise.\n"
+            "Always explain your reasoning step by step."
+        )
+
+        if consciousness.is_loaded:
             consciousness_prompt = consciousness.compose_system_prompt(
                 include_memory=False
             )
-
-            # Load trader philosophies as supplemental knowledge
-            philosophies = self._load_trader_philosophies()
-
-            system_prompt = f"""You are Dae — DeepStack Autonomous Engine.
-
-{consciousness_prompt}
-
----
-
-## Master Trader Wisdom (Supplemental)
-{philosophies}
-
-## Risk Management Rules
-- Maximum 5% per position (hard limit)
-- Maximum 15% portfolio heat (total risk)
-- 2% risk per trade (never more)
-- Kelly Criterion with 0.2x-0.3x fractional sizing
-- Never move stop losses down (only up)
-- Thesis break = immediate exit
-
-## Response Format
-When using tools, respond with JSON tool calls.
-When providing analysis, be comprehensive but concise.
-Always explain your reasoning step by step.
-"""
+            system_prompt = (
+                f"You are Dae — DeepStack Autonomous Engine.\n\n"
+                f"{consciousness_prompt}\n\n---\n\n"
+                f"## Master Trader Wisdom (Supplemental)\n"
+                f"{philosophies}\n\n"
+                f"{risk_rules}\n\n"
+                f"{response_fmt}"
+            )
             logger.info("System prompt composed from Dae consciousness files")
-
         else:
-            # Fallback: legacy hardcoded prompt
-            philosophies = self._load_trader_philosophies()
-
-            system_prompt = f"""
-You are {self.name}, an AI trading agent in the DeepStack autonomous trading system.
-
-{self.description}
-
-## Core Trading Philosophy
-- Find deep value opportunities (downside protection)
-- Identify short squeeze potential (explosive upside)
-- Asymmetric risk/reward: Risk $1 to make $10+
-- Systematic discipline that protects from emotions
-
-## Master Trader Wisdom
-{philosophies}
-
-## Risk Management Rules
-- Maximum 5% per position (hard limit)
-- Maximum 15% portfolio heat (total risk)
-- 2% risk per trade (never more)
-- Kelly Criterion with 0.2x-0.3x fractional sizing
-- Never move stop losses down (only up)
-- Thesis break = immediate exit
-
-## Your Role
-You must:
-1. Always provide reasoned analysis
-2. Quantify risks and rewards
-3. Document your thesis clearly
-4. Follow risk management rules strictly
-5. Use available tools to gather data
-6. Admit when you don't know something
-
-## Response Format
-When using tools, respond with JSON tool calls.
-When providing analysis, be comprehensive but concise.
-Always explain your reasoning step by step.
-"""
+            system_prompt = (
+                f"You are {self.name}, an AI trading agent in the "
+                f"DeepStack autonomous trading system.\n\n"
+                f"{self.description}\n\n"
+                f"## Core Trading Philosophy\n"
+                f"- Find deep value opportunities (downside protection)\n"
+                f"- Identify short squeeze potential (explosive upside)\n"
+                f"- Asymmetric risk/reward: Risk $1 to make $10+\n"
+                f"- Systematic discipline that protects from emotions\n\n"
+                f"## Master Trader Wisdom\n{philosophies}\n\n"
+                f"{risk_rules}\n\n"
+                f"## Your Role\n"
+                f"You must:\n"
+                f"1. Always provide reasoned analysis\n"
+                f"2. Quantify risks and rewards\n"
+                f"3. Document your thesis clearly\n"
+                f"4. Follow risk management rules strictly\n"
+                f"5. Use available tools to gather data\n"
+                f"6. Admit when you don't know something\n\n"
+                f"{response_fmt}"
+            )
             logger.warning(
                 "Consciousness files not loaded — using legacy system prompt"
             )

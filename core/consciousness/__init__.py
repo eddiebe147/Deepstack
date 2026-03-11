@@ -10,6 +10,6 @@ Architecture follows the CaF (Consciousness as Filesystem) pattern:
   through code paths, NOT through prompts — the entity cannot introspect on them
 """
 
-from .loader import DaeConsciousness
+from .loader import UNCONSCIOUS_POLICY, DaeConsciousness
 
-__all__ = ["DaeConsciousness"]
+__all__ = ["DaeConsciousness", "UNCONSCIOUS_POLICY"]

@@ -9,8 +9,9 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from .agents.base_agent import get_consciousness
 from .agents.strategy_agent import StrategyAgent
-from .consciousness import DaeConsciousness
+from .consciousness import UNCONSCIOUS_POLICY
 
 logger = logging.getLogger(__name__)
 
@@ -34,41 +35,27 @@ class TradingOrchestrator:
         self.order_manager = order_manager
         self.paper_trader = paper_trader
 
-        # Load Dae consciousness for unconscious policy
-        self._consciousness = DaeConsciousness()
-        self._consciousness.load()
-        self._unconscious_policy = self._consciousness.get_unconscious_policy_summary()
-        policy = self._unconscious_policy
+        # Use singleton consciousness; pull unconscious policy constants
+        get_consciousness()  # ensure loaded
+        self._unconscious_policy = dict(UNCONSCIOUS_POLICY)
         logger.info(
-            f"Dae unconscious policy loaded: "
-            f"loss_aversion={policy['loss_aversion_multiplier']}x, "
-            f"survival={policy['survival_instinct_threshold']:.0%}"
+            f"Dae unconscious policy: "
+            f"loss_aversion={self._unconscious_policy['loss_aversion_multiplier']}x, "
+            f"survival={self._unconscious_policy['survival_instinct_threshold']:.0%}"
         )
 
         self._task: Optional[asyncio.Task] = None
         self._running: bool = False
-        self._cadence_s: int = 30
         self._last_run_ts: Optional[datetime] = None
         self._last_action: Optional[str] = None
-        self._symbols: List[str] = []
         self._consecutive_errors = 0
-        self._max_backoff = 60  # seconds
-        self._base_backoff = 5  # seconds
+        self._max_backoff = 60
+        self._base_backoff = 5
 
-        # Defaults if automation config missing
-        try:
-            automation = getattr(self.config, "automation", None)
-            self._symbols = (
-                getattr(automation, "symbols", ["AAPL", "MSFT"])
-                if automation
-                else ["AAPL", "MSFT"]
-            )
-            self._cadence_s = (
-                int(getattr(automation, "cadence_s", 30)) if automation else 30
-            )
-        except Exception:
-            self._symbols = ["AAPL", "MSFT"]
-            self._cadence_s = 30
+        # Pull automation config with safe defaults
+        automation = getattr(self.config, "automation", None)
+        self._symbols: List[str] = getattr(automation, "symbols", ["AAPL", "MSFT"])
+        self._cadence_s: int = int(getattr(automation, "cadence_s", 30))
 
     def status(self) -> Dict[str, Any]:
         return {
