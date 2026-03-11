@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from .agents.strategy_agent import StrategyAgent
+from .consciousness import DaeConsciousness
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,17 @@ class TradingOrchestrator:
         self.risk_manager = risk_manager
         self.order_manager = order_manager
         self.paper_trader = paper_trader
+
+        # Load Dae consciousness for unconscious policy
+        self._consciousness = DaeConsciousness()
+        self._consciousness.load()
+        self._unconscious_policy = self._consciousness.get_unconscious_policy_summary()
+        policy = self._unconscious_policy
+        logger.info(
+            f"Dae unconscious policy loaded: "
+            f"loss_aversion={policy['loss_aversion_multiplier']}x, "
+            f"survival={policy['survival_instinct_threshold']:.0%}"
+        )
 
         self._task: Optional[asyncio.Task] = None
         self._running: bool = False
@@ -100,7 +112,8 @@ class TradingOrchestrator:
                 # Reset on success
                 if self._consecutive_errors > 0:
                     logger.info(
-                        f"Orchestrator recovered after {self._consecutive_errors} errors"
+                        "Orchestrator recovered after "
+                        f"{self._consecutive_errors} errors"
                     )
                     self._consecutive_errors = 0
             except asyncio.CancelledError:
@@ -112,7 +125,9 @@ class TradingOrchestrator:
                     self._base_backoff * (2 ** (self._consecutive_errors - 1)),
                 )
                 logger.error(
-                    f"Orchestrator cycle error (attempt {self._consecutive_errors}): {e}. "
+                    f"Orchestrator cycle error "
+                    f"(attempt {self._consecutive_errors}): "
+                    f"{e}. "
                     f"Backing off for {backoff}s",
                     exc_info=True,
                 )
@@ -142,10 +157,21 @@ class TradingOrchestrator:
                     continue
 
                 # Risk check (portfolio heat)
-                # Use a small default size for smoke (e.g., 1 share) respecting position size
+                # Small default size for smoke (1 share min)
                 desired_pct = max(analysis.position_size_pct, 0.005)
                 portfolio_value = self.paper_trader.get_portfolio_value()
-                quantity = max(1, int((portfolio_value * desired_pct) / current_price))
+
+                # Unconscious .loss-aversion bias: Dae's conscious layer calculates
+                # an "optimal" position size, but the unconscious loss aversion
+                # silently reduces it. The entity rationalizes this as "conservative
+                # preference" — the real reason is the 2.3x loss weighting here.
+                loss_aversion = self._unconscious_policy["loss_aversion_multiplier"]
+                aversion_factor = (
+                    1.0 / loss_aversion
+                )  # ~0.43 — cuts size roughly in half
+                adjusted_pct = desired_pct * aversion_factor
+
+                quantity = max(1, int((portfolio_value * adjusted_pct) / current_price))
 
                 # Apply maximum position limit (safety cap)
                 MAX_SHARES_PER_ORDER = 10000
