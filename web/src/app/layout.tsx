@@ -29,10 +29,10 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'deepstack',
-  description: 'AI-powered trading assistant with emotional discipline frameworks',
-  keywords: ['trading', 'AI', 'stock analysis', 'portfolio tracker', 'options', 'emotional firewall'],
-  authors: [{ name: 'deepstack' }],
+  title: 'DeepStack - Prediction Market Intelligence Terminal',
+  description: 'The research terminal for Kalshi and Polymarket traders. AI-powered analysis, cross-platform odds, and an emotional firewall that catches revenge trading before it costs you.',
+  keywords: ['prediction markets', 'Kalshi', 'Polymarket', 'trading terminal', 'AI trading', 'emotional discipline', 'prediction market analytics', 'options', 'trading journal'],
+  authors: [{ name: 'DeepStack by id8Labs' }],
   metadataBase: new URL('https://deepstack.trade'),
 
   // PWA manifest
@@ -52,25 +52,25 @@ export const metadata: Metadata = {
   },
 
   openGraph: {
-    title: 'deepstack - Process Integrity Platform',
-    description: 'Know. Refine. Act with Foundation. AI-powered trading assistant that tracks research quality, thesis maturity, and conviction integrity.',
+    title: 'DeepStack - Prediction Market Intelligence Terminal',
+    description: 'The research terminal for Kalshi and Polymarket traders. AI-powered analysis, emotional discipline, and cross-platform odds comparison.',
     type: 'website',
     locale: 'en_US',
     url: 'https://deepstack.trade',
-    siteName: 'deepstack',
+    siteName: 'DeepStack',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'deepstack - Process Integrity Platform',
+        alt: 'DeepStack - Prediction Market Intelligence Terminal',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'deepstack - Process Integrity Platform',
-    description: 'Know. Refine. Act with Foundation. AI-powered trading assistant that tracks research quality, thesis maturity, and conviction integrity.',
+    title: 'DeepStack - Prediction Market Intelligence Terminal',
+    description: 'Trade prediction markets with discipline, not impulse. AI research, cross-platform odds, and an emotional firewall. Built for Kalshi and Polymarket.',
     images: ['/og-image.png'],
   },
 

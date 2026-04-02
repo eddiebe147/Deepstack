@@ -49,31 +49,31 @@ import {
 // The Three Pillars
 const THREE_PILLARS = [
   {
-    icon: <Target className="w-8 h-8" />,
-    title: 'Knowing When to Act',
-    subtitle: 'Signal vs. Noise',
-    description: 'Most platforms drown you in data. DeepStack helps you recognize what actually matters for your specific thesis.',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
-    borderColor: 'border-blue-500/30',
+    icon: <BarChart3 className="w-8 h-8" />,
+    title: 'Prediction Market Intelligence',
+    subtitle: 'Kalshi + Polymarket',
+    description: 'Live odds, cross-platform comparison, and AI-powered probability analysis. See what the market thinks, then decide if it is wrong.',
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/10',
+    borderColor: 'border-cyan-500/30',
   },
   {
-    icon: <Scale className="w-8 h-8" />,
-    title: 'Closing the Distance',
-    subtitle: 'Research to Conviction',
-    description: 'The gap between having information and having conviction. We help you bridge it through structured thinking.',
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-    borderColor: 'border-purple-500/30',
-  },
-  {
-    icon: <Zap className="w-8 h-8" />,
-    title: 'Grounded Action',
-    subtitle: 'Knowledge in Motion',
-    description: 'Knowledge without action is trivia. Action without knowledge is gambling. We help you act with foundation.',
+    icon: <Shield className="w-8 h-8" />,
+    title: 'Emotional Discipline Engine',
+    subtitle: 'Your Behavioral Circuit Breaker',
+    description: '92% of prediction market traders lose money. The pattern is emotional, not analytical. We detect revenge trading, overtrading, and weak conviction before they cost you.',
     color: 'text-orange-400',
     bgColor: 'bg-orange-500/10',
     borderColor: 'border-orange-500/30',
+  },
+  {
+    icon: <Lightbulb className="w-8 h-8" />,
+    title: 'Thesis to Settlement',
+    subtitle: 'Structured Conviction',
+    description: 'Develop hypotheses, track them against live markets, and validate your thinking with real probabilities. Good theses survive the overnight test.',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
+    borderColor: 'border-purple-500/30',
   },
 ];
 
@@ -108,74 +108,74 @@ const INTEGRITY_DIMENSIONS = [
 // What DeepStack is NOT vs IS
 const NOT_IS_COMPARISON = {
   not: [
-    { icon: <XCircle className="w-5 h-5" />, text: 'A signal service telling you what to buy' },
-    { icon: <XCircle className="w-5 h-5" />, text: 'A screener finding "hot stocks"' },
-    { icon: <XCircle className="w-5 h-5" />, text: 'A news aggregator with sentiment' },
-    { icon: <XCircle className="w-5 h-5" />, text: 'A crystal ball predicting prices' },
+    { icon: <XCircle className="w-5 h-5" />, text: 'A signal service telling you what to bet' },
+    { icon: <XCircle className="w-5 h-5" />, text: 'A bot that trades for you' },
+    { icon: <XCircle className="w-5 h-5" />, text: 'A news aggregator with vibes-based sentiment' },
+    { icon: <XCircle className="w-5 h-5" />, text: 'A get-rich-quick prediction engine' },
   ],
   is: [
-    { icon: <CheckCircle className="w-5 h-5" />, text: 'A thinking partner that validates your process' },
-    { icon: <CheckCircle className="w-5 h-5" />, text: 'A system that tracks research quality' },
-    { icon: <CheckCircle className="w-5 h-5" />, text: 'Friction that reveals weak conviction' },
-    { icon: <CheckCircle className="w-5 h-5" />, text: 'A journal of your evolving understanding' },
+    { icon: <CheckCircle className="w-5 h-5" />, text: 'A research terminal for prediction market traders' },
+    { icon: <CheckCircle className="w-5 h-5" />, text: 'An emotional firewall that catches your worst instincts' },
+    { icon: <CheckCircle className="w-5 h-5" />, text: 'A thesis engine that tracks conviction over time' },
+    { icon: <CheckCircle className="w-5 h-5" />, text: 'Cross-platform intelligence across Kalshi and Polymarket' },
   ],
 };
 
-// Feature grid - now with 8 items including Options
+// Feature grid - prediction markets first
 const FEATURES = [
-  {
-    icon: <MessageSquare className="w-6 h-6" />,
-    title: 'AI Research Assistant',
-    description: 'Challenge your thesis, find the bearish case, stress-test your assumptions.',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
-  },
-  {
-    icon: <TrendingUp className="w-6 h-6" />,
-    title: 'Live Market Data',
-    description: 'Real-time quotes, OHLCV charts, and technical indicators via Alpaca.',
-    color: 'text-green-400',
-    bgColor: 'bg-green-500/10',
-  },
-  {
-    icon: <Shield className="w-6 h-6" />,
-    title: 'Process Integrity Engine',
-    description: 'Creates friction at commitment points. Pause, not block. Override with reasoning.',
-    color: 'text-orange-400',
-    bgColor: 'bg-orange-500/10',
-  },
-  {
-    icon: <BookOpen className="w-6 h-6" />,
-    title: 'Trade Journal',
-    description: 'Rich text entries with screenshot capture and emotion tagging.',
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10',
-  },
-  {
-    icon: <Lightbulb className="w-6 h-6" />,
-    title: 'Thesis Engine',
-    description: 'Structured hypotheses that mature over time. Track evolution, not just entry/exit.',
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-500/10',
-  },
   {
     icon: <BarChart3 className="w-6 h-6" />,
     title: 'Prediction Markets',
-    description: 'Kalshi + Polymarket integration for thesis validation with real probabilities.',
+    description: 'Live Kalshi and Polymarket odds. Cross-platform comparison. Event tracking with settlement countdowns.',
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
   },
   {
+    icon: <Shield className="w-6 h-6" />,
+    title: 'Emotional Firewall',
+    description: 'Detects revenge trading, overtrading, and exhaustion in real time. Your behavioral circuit breaker.',
+    color: 'text-orange-400',
+    bgColor: 'bg-orange-500/10',
+  },
+  {
+    icon: <MessageSquare className="w-6 h-6" />,
+    title: 'AI Research Assistant',
+    description: '30+ analysis tools powered by Claude. Challenge your thesis, find the bearish case, stress-test assumptions.',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+  },
+  {
+    icon: <Lightbulb className="w-6 h-6" />,
+    title: 'Thesis Engine',
+    description: 'Structured hypotheses that mature over time. Link theses to prediction markets with live validation scores.',
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/10',
+  },
+  {
+    icon: <BookOpen className="w-6 h-6" />,
+    title: 'Trade Journal',
+    description: 'Log trades with emotional state, P&L tracking, and rich text notes. See your patterns over time.',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
+  },
+  {
+    icon: <TrendingUp className="w-6 h-6" />,
+    title: 'Professional Charts',
+    description: '30+ indicators, drawing tools, and multi-timeframe analysis. Real-time data via Alpaca.',
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/10',
+  },
+  {
     icon: <Calculator className="w-6 h-6" />,
     title: 'Options Builder',
-    description: 'Multi-leg strategy construction with visual P&L and Greeks display.',
+    description: 'Full options chains, Greeks, and multi-leg strategy construction with payoff diagrams.',
     color: 'text-pink-400',
     bgColor: 'bg-pink-500/10',
   },
   {
     icon: <Newspaper className="w-6 h-6" />,
     title: 'News & Screener',
-    description: 'Auto-refreshing news feed and stock screener with deep value filters.',
+    description: 'Natural language stock screener. Auto-refreshing news. Congressional trading tracker.',
     color: 'text-emerald-400',
     bgColor: 'bg-emerald-500/10',
   },
@@ -754,8 +754,8 @@ export default function LandingPage() {
               transition={{ duration: 0.6 }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20 backdrop-blur-sm"
             >
-              <Scale className="w-4 h-4" />
-              <span>Process Integrity Platform</span>
+              <BarChart3 className="w-4 h-4" />
+              <span>Prediction Market Intelligence</span>
             </motion.div>
 
             {/* Headline */}
@@ -765,9 +765,9 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-[1.1]"
             >
-              Know. Refine.
+              Trade Smarter.
               <br />
-              <span className="text-gradient-shimmer">Act with Foundation.</span>
+              <span className="text-gradient-shimmer">Not More.</span>
             </motion.h1>
 
             {/* Evocative tagline */}
@@ -777,7 +777,7 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.15 }}
               className="text-2xl md:text-3xl text-foreground/90 mb-4 font-medium"
             >
-              Knowledge without action is trivia. Action without knowledge is gambling.
+              The research terminal for Kalshi and Polymarket traders who want to win with discipline, not impulse.
             </motion.p>
 
             {/* Subheadline */}
@@ -787,7 +787,7 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
             >
-              DeepStack tracks your research quality, thesis maturity, and conviction integrity. Friction at commitment points, not blocks.
+              AI-powered analysis, cross-platform odds, and an emotional firewall that catches revenge trading before it costs you. 92% of prediction market traders lose. DeepStack helps you be in the 8%.
             </motion.p>
 
             {/* CTA Buttons */}
@@ -819,7 +819,7 @@ export default function LandingPage() {
                   >
                     {/* Animated ring */}
                     <span className="absolute inset-0 rounded-2xl border-2 border-primary/50 animate-ping opacity-20" />
-                    Ground Your Process
+                    Start Trading Smarter
                     <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </motion.div>
@@ -876,10 +876,10 @@ export default function LandingPage() {
         {/* ================================================================== */}
         <StickySection
           id="pillars"
-          title="Three Pillars of Grounded Trading"
-          subtitle="Not more data. Better process."
-          badge="Philosophy"
-          badgeIcon={<Target className="w-4 h-4" />}
+          title="Why Traders Choose DeepStack"
+          subtitle="Intelligence. Discipline. Conviction."
+          badge="The Edge"
+          badgeIcon={<BarChart3 className="w-4 h-4" />}
           badgeColor="bg-primary/10 text-primary border-primary/20"
           scrollHeight="min-h-fit"
           align="center"
@@ -909,10 +909,10 @@ export default function LandingPage() {
             <ScrollReveal className="text-center mb-12">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 text-muted-foreground text-sm font-medium border border-border/30 mb-4">
                 <Search className="w-4 h-4" />
-                Clear Positioning
+                Honest About What We Are
               </span>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Let&apos;s be clear about what DeepStack is.
+                Built for prediction market traders who want an edge, not a shortcut.
               </h2>
             </ScrollReveal>
 
@@ -965,11 +965,11 @@ export default function LandingPage() {
             <ScrollReveal className="text-center mb-16">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium border border-primary/20 mb-4">
                 <Shield className="w-4 h-4" />
-                Process Integrity Engine
+                Emotional Discipline Engine
               </span>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Friction at commitment points.{' '}
-                <span className="text-gradient-shimmer">Not blocks.</span>
+                Your behavioral circuit breaker.{' '}
+                <span className="text-gradient-shimmer">Not a nanny.</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 When you&apos;re about to act, we check three dimensions. If your process is weak, you&apos;ll know — and you can still proceed.
@@ -1064,8 +1064,8 @@ export default function LandingPage() {
         {/* ================================================================== */}
         <StickySection
           id="features"
-          title="Everything You Need"
-          subtitle="Eight integrated tools. One workspace. Zero context-switching."
+          title="Your Complete Trading Terminal"
+          subtitle="Prediction markets, research, discipline. One workspace."
           badge="Full Toolkit"
           badgeIcon={<Sparkles className="w-4 h-4" />}
           scrollHeight="min-h-fit"
@@ -1290,7 +1290,7 @@ export default function LandingPage() {
               <div className="mb-12 p-6 rounded-2xl bg-card/30 border border-primary/20 text-center max-w-xl mx-auto">
                 <Quote className="w-6 h-6 text-primary/40 mx-auto mb-3" />
                 <p className="text-base italic text-foreground/80 mb-3 leading-relaxed">
-                  &quot;I kept making impulsive trades with half-baked theses. I needed a system to show me when my process was weak — not block me, just make me confront it.&quot;
+                  &quot;I built a trading bot that placed unauthorized trades. I realized the problem was never the code. It was me trading on impulse without a system. That is why I built DeepStack.&quot;
                 </p>
                 <p className="text-xs text-muted-foreground font-medium">— Eddie, Founder</p>
               </div>
@@ -1298,15 +1298,15 @@ export default function LandingPage() {
 
             <ScrollReveal delay={0.1}>
               <h2 className="text-4xl md:text-6xl font-bold mb-6">
-                Ready to act
+                Ready to trade
                 <br />
-                <span className="text-gradient-shimmer">with foundation?</span>
+                <span className="text-gradient-shimmer">with discipline?</span>
               </h2>
             </ScrollReveal>
 
             <ScrollReveal delay={0.2}>
               <p className="text-muted-foreground text-xl mb-8">
-                Ground your process. Know when you&apos;re ready.
+                Prediction market intelligence meets emotional discipline. Free to start.
               </p>
             </ScrollReveal>
 
@@ -1321,7 +1321,7 @@ export default function LandingPage() {
                     className="relative inline-flex items-center justify-center gap-3 px-12 py-6 bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl font-bold transition-all text-xl group shadow-[0_0_40px_rgba(251,146,60,0.5)] hover:shadow-[0_0_60px_rgba(251,146,60,0.7)]"
                   >
                     <span className="absolute inset-0 rounded-2xl border-2 border-primary/50 animate-ping opacity-20" />
-                    Ground Your Process
+                    Start Trading Smarter
                     <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </motion.div>
@@ -1342,7 +1342,7 @@ export default function LandingPage() {
                 <Brain className="w-5 h-5 text-primary" />
                 <span className="font-semibold tracking-tight">deepstack</span>
                 <span className="text-muted-foreground text-sm ml-2 px-2 py-0.5 bg-muted rounded-full">
-                  Process Integrity
+                  Prediction Market Intelligence
                 </span>
               </div>
               <div className="flex items-center gap-8 text-sm font-medium">
