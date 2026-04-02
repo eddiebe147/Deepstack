@@ -1,13 +1,15 @@
 # Pipeline Status: DeepStack
 
 > Created: 2025-12-05
-> Last Updated: 2025-12-16
+> Last Updated: 2026-04-02
 
 ---
 
-## Current Stage: 9 - Ship
+## Current Stage: 10 - Listen & Iterate (v2 pivot in progress)
 
-**Next Checkpoint Question:** "Is it live and are people using it?"
+**Next Checkpoint Question:** "Is the prediction market pivot attracting users and Builder Program revenue?"
+
+**Strategic Pivot (2026-04-02):** Repositioning from general trading research platform to **prediction market intelligence terminal + emotional discipline engine**. Applying for Kalshi Builder Program. Direction: A+C.
 
 ---
 
@@ -23,8 +25,19 @@
 | 6. Integration Pass | ✅ Cleared | 2025-12-08 | Backend on Railway, all integrations complete |
 | 7. Polish & Harden | ✅ Cleared | 2025-12-08 | Error boundaries, loading states, lazy loading complete |
 | 8. Launch Prep | ✅ Cleared | 2025-12-08 | Legal, analytics, docs, onboarding, landing page complete |
-| 9. Ship | 🔄 In Progress | - | Deploy final version to production |
-| 10. Listen & Iterate | ⬜ Pending | - | |
+| 9. Ship | ✅ Cleared | 2025-12-16 | Live at deepstack.trade, v2.5.0 |
+| 10. Listen & Iterate | 🔄 In Progress | - | PM pivot: Builder Program app, Stripe wiring, PM-first features |
+
+## Active Workstream: Prediction Market Pivot
+
+| Task | Status | Priority |
+|------|--------|----------|
+| Write triad files (VISION/SPEC/BUILDING) | ✅ Done | P0 |
+| Apply for Kalshi Builder Program | ⬜ Pending | P0 |
+| Wire Stripe checkout | ⬜ Pending | P0 |
+| Record demo video | ⬜ Pending | P1 |
+| Deepen Kalshi-specific features | ⬜ Pending | P1 |
+| Builder code integration | ⬜ Pending | P1 (post-approval) |
 
 **Status Key:** ⬜ Pending | 🔄 In Progress | ✅ Cleared | ⏭️ Skipped
 
