@@ -83,7 +83,7 @@ export default function PricingPage() {
 
         try {
             // Call backend to create checkout session
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/checkout/create-session`, {
+            const response = await fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
