@@ -25,7 +25,7 @@ import os
 import sys
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +51,9 @@ logging.basicConfig(
         ),
     ],
 )
+# httpx includes full request URLs in INFO logs. Telegram embeds the bot token
+# in the URL path, so suppress transport-level request logging.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("deepsignals.alerts")
 
 
@@ -107,7 +110,9 @@ async def send_telegram(message: str, dry_run: bool = False) -> bool:
                 logger.info("Telegram alert sent successfully")
                 return True
             else:
-                logger.error(f"Telegram API error: {resp.status_code} - {resp.text[:200]}")
+                logger.error(
+                    f"Telegram API error: {resp.status_code} - {resp.text[:200]}"
+                )
                 return False
     except Exception as e:
         logger.error(f"Failed to send Telegram alert: {e}")
@@ -142,7 +147,10 @@ async def check_extreme_pcr() -> List[str]:
                 f"<i>Low put buying indicates extreme complacency</i>"
             )
 
-        logger.info(f"PCR check: total={pcr:.3f}, percentile={percentile:.1%}, alerts={len(alerts)}")
+        logger.info(
+            f"PCR check: total={pcr:.3f}, percentile={percentile:.1%}, "
+            f"alerts={len(alerts)}"
+        )
     except Exception as e:
         logger.error(f"PCR check failed: {e}")
     finally:
@@ -161,7 +169,10 @@ async def check_dark_pool() -> List[str]:
         extreme = [r for r in top if r.short_ratio > 0.60]
 
         if extreme:
-            lines = [f"<b>Dark Pool Alert</b> - {len(extreme)} tickers with &gt;60% short ratio\n"]
+            lines = [
+                f"<b>Dark Pool Alert</b> - {len(extreme)} tickers "
+                f"with &gt;60% short ratio\n"
+            ]
             for r in extreme[:10]:
                 lines.append(
                     f"  <code>{r.symbol:6s}</code> "
@@ -170,7 +181,9 @@ async def check_dark_pool() -> List[str]:
                 )
             alerts.append("\n".join(lines))
 
-        logger.info(f"Dark pool check: {len(top)} tickers scanned, {len(extreme)} extreme")
+        logger.info(
+            f"Dark pool check: {len(top)} tickers scanned, {len(extreme)} extreme"
+        )
     except Exception as e:
         logger.error(f"Dark pool check failed: {e}")
     finally:
@@ -205,7 +218,9 @@ async def check_insider_clusters() -> List[str]:
                     f"Buyers: <i>{', '.join(filers)}</i>"
                 )
 
-        logger.info(f"Insider check: {len(trades)} trades, {len(alerts)} cluster alerts")
+        logger.info(
+            f"Insider check: {len(trades)} trades, {len(alerts)} cluster alerts"
+        )
     except Exception as e:
         logger.error(f"Insider check failed: {e}")
     finally:
@@ -266,7 +281,10 @@ async def run_alerts(dry_run: bool = False):
 def main():
     parser = argparse.ArgumentParser(
         prog="deepsignals_alerts",
-        description="DeepSignals alert engine — checks for significant signals and sends Telegram alerts",
+        description=(
+            "DeepSignals alert engine: checks for significant signals "
+            "and sends Telegram alerts"
+        ),
     )
     parser.add_argument(
         "--dry-run",

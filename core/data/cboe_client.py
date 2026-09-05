@@ -33,11 +33,17 @@ class PutCallData:
     put_call_ratio: float
 
 
-# Valid ratio types mapped to their CBOE CSV URLs
+# Valid ratio types mapped to their CBOE CSV URLs.
+#
+# The host and path are hoisted because a URL cannot be wrapped mid-string, and
+# the same 68-character prefix was written out three times - so a CBOE path
+# change was three edits with two chances to miss one.
+_CBOE_RATIOS = "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios"
+
 RATIO_URLS: Dict[str, str] = {
-    "total": "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/totalpc.csv",
-    "equity": "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/equitypc.csv",
-    "index": "https://cdn.cboe.com/resources/options/volume_and_call_put_ratios/indexpc.csv",
+    "total": f"{_CBOE_RATIOS}/totalpc.csv",
+    "equity": f"{_CBOE_RATIOS}/equitypc.csv",
+    "index": f"{_CBOE_RATIOS}/indexpc.csv",
 }
 
 VALID_RATIO_TYPES = tuple(RATIO_URLS.keys())
@@ -55,6 +61,7 @@ class CBOEClient:
     """
 
     CACHE_TTL = 3600  # 1 hour
+    MAX_DATA_AGE_DAYS = 7
 
     def __init__(self, max_retries: int = 3):
         self.max_retries = max_retries
@@ -86,7 +93,8 @@ class CBOEClient:
         ratio_type = ratio_type.strip().lower()
         if ratio_type not in VALID_RATIO_TYPES:
             raise ValueError(
-                f"Invalid ratio_type '{ratio_type}'. Must be one of: {VALID_RATIO_TYPES}"
+                f"Invalid ratio_type '{ratio_type}'. "
+                f"Must be one of: {VALID_RATIO_TYPES}"
             )
         return ratio_type
 
@@ -131,9 +139,7 @@ class CBOEClient:
 
                 rows = self._parse_csv(response.text, ratio_type)
                 self._set_cached(ratio_type, rows)
-                logger.info(
-                    f"Fetched {len(rows)} rows of CBOE {ratio_type} PCR data"
-                )
+                logger.info(f"Fetched {len(rows)} rows of CBOE {ratio_type} PCR data")
                 return rows
 
             except httpx.HTTPStatusError as e:
@@ -153,9 +159,12 @@ class CBOEClient:
             if attempt < self.max_retries - 1:
                 import asyncio
 
-                await asyncio.sleep(min(5 * (2 ** attempt), 30))
+                await asyncio.sleep(min(5 * (2**attempt), 30))
 
-        logger.error(f"Failed to fetch CBOE {ratio_type} CSV after {self.max_retries} attempts: {last_error}")
+        logger.error(
+            f"Failed to fetch CBOE {ratio_type} CSV after "
+            f"{self.max_retries} attempts: {last_error}"
+        )
         return []
 
     def _parse_csv(self, text: str, ratio_type: str) -> List[PutCallData]:
@@ -190,7 +199,9 @@ class CBOEClient:
         calls_idx = self._find_col(normalized, ["CALLS", "CALL VOLUME", "CALL"])
         puts_idx = self._find_col(normalized, ["PUTS", "PUT VOLUME", "PUT"])
         total_idx = self._find_col(normalized, ["TOTAL", "TOTAL VOLUME"])
-        ratio_idx = self._find_col(normalized, ["P/C RATIO", "PUT/CALL RATIO", "PC RATIO"])
+        ratio_idx = self._find_col(
+            normalized, ["P/C RATIO", "PUT/CALL RATIO", "PC RATIO"]
+        )
 
         if date_idx is None or ratio_idx is None:
             logger.error(
@@ -202,7 +213,8 @@ class CBOEClient:
         for row in reader:
             try:
                 if len(row) <= max(
-                    i for i in [date_idx, calls_idx, puts_idx, total_idx, ratio_idx]
+                    i
+                    for i in [date_idx, calls_idx, puts_idx, total_idx, ratio_idx]
                     if i is not None
                 ):
                     continue
@@ -216,9 +228,15 @@ class CBOEClient:
 
                 pcr = float(row[ratio_idx].strip()) if ratio_idx is not None else 0.0
 
-                call_vol = self._safe_int(row[calls_idx]) if calls_idx is not None else 0
+                call_vol = (
+                    self._safe_int(row[calls_idx]) if calls_idx is not None else 0
+                )
                 put_vol = self._safe_int(row[puts_idx]) if puts_idx is not None else 0
-                total_vol = self._safe_int(row[total_idx]) if total_idx is not None else (call_vol + put_vol)
+                total_vol = (
+                    self._safe_int(row[total_idx])
+                    if total_idx is not None
+                    else (call_vol + put_vol)
+                )
 
                 rows.append(
                     PutCallData(
@@ -264,9 +282,7 @@ class CBOEClient:
 
     # ── Public API ───────────────────────────────────────────────
 
-    async def get_put_call_ratio(
-        self, ratio_type: str = "total"
-    ) -> PutCallData:
+    async def get_put_call_ratio(self, ratio_type: str = "total") -> PutCallData:
         """
         Get the most recent put/call ratio.
 
@@ -285,7 +301,16 @@ class CBOEClient:
         if not rows:
             raise ValueError(f"No CBOE {ratio_type} put/call data available")
 
-        return rows[0]
+        latest = rows[0]
+        latest_date = datetime.strptime(latest.date, "%Y-%m-%d")
+        age = datetime.now() - latest_date
+        if age > timedelta(days=self.MAX_DATA_AGE_DAYS):
+            raise ValueError(
+                f"Stale CBOE {ratio_type} data: latest row is {latest.date} "
+                f"({age.days} days old)"
+            )
+
+        return latest
 
     async def get_historical_pcr(
         self, days: int = 30, ratio_type: str = "total"
@@ -309,7 +334,7 @@ class CBOEClient:
         Calculate where the current PCR sits vs its 252-day history.
 
         A percentile of 0.90 means the current PCR is higher than 90% of
-        the last 252 trading days — indicating elevated put buying (bearish).
+        the last 252 trading days, indicating elevated put buying (bearish).
 
         Args:
             ratio_type: One of "total", "equity", "index"
